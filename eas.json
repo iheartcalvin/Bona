@@ -7,14 +7,15 @@
             "developmentClient": true,
             "distribution": "internal"
         },
-        "android": {
-            "buildType": "apk"
+        "preview": {
+            "android": {
+                "buildType": "apk"
+            },
+            "npmClient": "npm"
         },
-        "npmClient": "npm"
+        "production": {}
     },
-    "production": {}
-},
-"submit": {
-    "production": {}
-}
+    "submit": {
+        "production": {}
+    }
 }
