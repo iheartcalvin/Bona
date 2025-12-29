@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "995328182020",
+    "project_id": "beloved-e143e",
+    "storage_bucket": "beloved-e143e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:995328182020:android:f081897b747154c0d5f251",
+        "android_client_info": {
+          "package_name": "com.faithtech.beloved"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "995328182020-45mup7qhgd0ouccv0s218t019hps9ugg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoI7IAryOeauQqWFP5RirbUBq6Bk9vXY0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "995328182020-45mup7qhgd0ouccv0s218t019hps9ugg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "995328182020-228auge477ja2jna3lod955bsb99n8jb.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.faithtech.beloved"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

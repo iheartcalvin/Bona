@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>995328182020-228auge477ja2jna3lod955bsb99n8jb.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.995328182020-228auge477ja2jna3lod955bsb99n8jb</string>
+	<key>API_KEY</key>
+	<string>AIzaSyAtq0DKVkkHMjP6Dy1b0vgbKIWnU6D3Xr8</string>
+	<key>GCM_SENDER_ID</key>
+	<string>995328182020</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.faithtech.beloved</string>
+	<key>PROJECT_ID</key>
+	<string>beloved-e143e</string>
+	<key>STORAGE_BUCKET</key>
+	<string>beloved-e143e.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:995328182020:ios:9e369451f9a9c8c2d5f251</string>
+</dict>
+</plist>
