@@ -40,7 +40,8 @@
   "private": true,
   "devDependencies": {
     "babel-preset-expo": "^54.0.9",
-    "react-native-dotenv": "^3.4.11"
+    "react-native-dotenv": "^3.4.11",
+    "react-refresh": "^0.18.0"
   },
   "engines": {
     "node": ">=18.0.0"

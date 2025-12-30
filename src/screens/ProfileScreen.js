@@ -209,14 +209,14 @@ const ProfileScreen = () => {
                     <Text style={styles.userHandle}>@{user?.username || 'user'}</Text>
 
                     {/* Demographics Badge */}
-                    {(user?.age || (user?.gender && user.gender !== 'Unknown')) && (
+                    {Boolean(user?.age || (user?.gender && user.gender !== 'Unknown')) && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                            {user?.gender && user.gender !== 'Unknown' && (
+                            {Boolean(user?.gender && user.gender !== 'Unknown') && (
                                 <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
                                     <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '600' }}>{user.gender}</Text>
                                 </View>
                             )}
-                            {user?.age && (
+                            {Boolean(user?.age) && (
                                 <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
                                     <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '600' }}>{user.age} y/o</Text>
                                 </View>
