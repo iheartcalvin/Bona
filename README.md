@@ -11,29 +11,10 @@ The name **Bona** means *"see / look"* in Swahili — representing clarity, disc
 
 > **Core promise:** _"Jifunze kwa furaha"_ — Learn with joy.
 
----
-
-## 2. What We're Reusing From Beloved (& What We Replace)
-
-| Beloved Feature | Bona Equivalent | Status |
-|---|---|---|
-| Bible Screen | **Textbook Reader** (PDF/chapter per subject) | Replace |
-| Prayer Screen | **Daily Lesson / Study Session** | Replace |
-| Prayer Analytics | **Study Streak & Progress Analytics** | Repurpose |
-| Spaces (Live Audio) | **Live Study Rooms** (teacher-led or peer) | Keep + Enhance |
-| Chat / Companion | **Bona AI Tutor** (age-aware, Swahili/English) | Replace |
-| Events / Donations | **School Events & Competitions** | Repurpose |
-| Profile + Social | **Student Profile + Leaderboard** | Repurpose |
-| Notifications | **Lesson Reminders + Achievement Alerts** | Keep |
-| Auth (Firebase) | **Student Auth + Parent/Teacher Gate** | Enhance |
-| Groq AI | **AI Tutor powered by Groq (llama-3.x)** | Keep + Enhance |
-| Agora (Live Audio) | **Live Classroom Audio/Video** | Keep |
-| ClickPesa | **School Fee / Resource Payments (TZS)** | Keep |
-| Word of the Day | **Concept of the Day / Neno la Leo** | Replace |
 
 ---
 
-## 3. Brand Identity
+## 2. Brand Identity
 
 | Item | Value |
 |---|---|
@@ -66,7 +47,7 @@ const BONA_COLORS = {
 
 ---
 
-## 4. Age Groups & Learning Levels
+## 3. Age Groups & Learning Levels
 
 | Group | Ages | Tanzania Level | Tab Experience |
 |---|---|---|---|
@@ -78,7 +59,7 @@ The app asks age on signup and **adapts the UI, language, and content difficulty
 
 ---
 
-## 5. Tanzania Syllabus Coverage
+## 4. Tanzania Syllabus Coverage
 
 ### Primary School (Shule ya Msingi) — Ages 7–13
 - Kiswahili
@@ -107,9 +88,9 @@ The app asks age on signup and **adapts the UI, language, and content difficulty
 
 ---
 
-## 6. App Architecture — Screen Map
+## 5. App Architecture — Screen Map
 
-### 6.1 Navigation Structure
+### 5.1 Navigation Structure
 
 ```
 RootNavigator
@@ -138,7 +119,7 @@ Stack Screens (from Root):
 └── ParentDashboardScreen   (new!)
 ```
 
-### 6.2 Core Screens Breakdown
+### 5.2 Core Screens Breakdown
 
 #### 📚 Learn Tab — `SubjectsScreen`
 Mirrors the old Bible tab but for academic content:
@@ -193,15 +174,15 @@ Evolution of ProfileScreen:
 
 ---
 
-## 7. AI Tutor — "Bona AI" 
+## 6. AI Tutor — "Bona AI" 
 
 This is the heart of the new app. Replaces the Beloved Companion.
 
-### 7.1 Persona
+### 6.1 Persona
 **Name:** Bona AI (or "Mwalimu Bona" — Teacher Bona)  
 **Personality:** Patient, encouraging, never condescending. Uses age-appropriate language. Explains in Swahili when asked, English when in exam prep mode.
 
-### 7.2 Capabilities
+### 6.2 Capabilities
 
 ```js
 // New AIService methods for Bona:
@@ -226,7 +207,7 @@ AIService.generateConceptOfDay(grade, subjects)
 // → Daily concept with explanation and example (replaces Word of Day)
 ```
 
-### 7.3 Content Guardrails
+### 6.3 Content Guardrails
 The AI tutor is **strictly academic**:
 - System prompt explicitly rejects non-academic conversations
 - Returns a friendly redirect: _"Ninaelewa! Lakini mimi ni mwalimu tu. Una swali la masomo?"_
@@ -237,7 +218,7 @@ The AI tutor is **strictly academic**:
 
 ---
 
-## 8. Data Model (Firestore)
+## 7. Data Model (Firestore)
 
 ### `users/{uid}`
 ```
@@ -313,7 +294,7 @@ Same as Beloved channels but adds:
 
 ---
 
-## 9. What We Build — Phase Plan
+## 8. What We Build — Phase Plan
 
 ### Phase 1 — Foundation (Weeks 1-3)
 > Rebrand + Core Auth + Learn Tab
@@ -367,25 +348,25 @@ Same as Beloved channels but adds:
 
 ---
 
-## 10. Key Technical Decisions
+## 9. Key Technical Decisions
 
-### 10.1 Content Delivery
+### 9.1 Content Delivery
 - **Phase 1-2:** Content stored in Firestore (structured JSON/markdown per topic)
 - **Phase 3+:** Option to serve content from Firebase Storage as PDFs / audio files
 - Use existing `SpeechService` (UnrealSpeech) for TTS — rebranded as "Sikiliza" (Listen) button
 
-### 10.2 AI Model
+### 9.2 AI Model
 - Keep **Groq + llama-3.1-8b-instant** — it's fast and cheap
 - Add **`llama-3.3-70b-versatile`** for complex explanation requests
 - Add Swahili-specific system prompts
 - Implement **conversation memory** (last 10 messages) for coherent tutoring sessions
 
-### 10.3 Live Classrooms
+### 9.3 Live Classrooms
 - Keep **Agora** for audio/video
 - Add text-based whiteboard sync through Firestore (like the Bible reading sync)
 - Implement teacher token type vs student token type in the Cloud Function
 
-### 10.4 Gamification Engine
+### 9.4 Gamification Engine
 ```js
 // XP Awards
 const XP_REWARDS = {
@@ -399,7 +380,7 @@ const XP_REWARDS = {
 };
 ```
 
-### 10.5 Parental Controls (Under-13)
+### 9.5 Parental Controls (Under-13)
 - Parent email required on signup for Watoto group
 - Parent receives weekly progress email (Cloud Function)
 - Parent can view all AI tutor conversations
@@ -407,7 +388,7 @@ const XP_REWARDS = {
 
 ---
 
-## 11. New Cloud Functions Needed
+## 10. New Cloud Functions Needed
 
 | Function | Purpose |
 |---|---|
@@ -421,7 +402,7 @@ const XP_REWARDS = {
 
 ---
 
-## 12. Monetization Strategy
+## 11. Monetization Strategy
 
 | Stream | Description | Price |
 |---|---|---|
@@ -433,7 +414,7 @@ const XP_REWARDS = {
 
 ---
 
-## 13. What Makes Bona Different
+## 12. What Makes Bona Different
 
 1. **Tanzania-specific** — Not a generic edtech app. Built for NECTA, in Swahili.
 2. **Age-adaptive** — The app literally changes how it looks and speaks based on the child's age.
@@ -445,7 +426,7 @@ const XP_REWARDS = {
 
 ---
 
-## 14. Immediate Next Steps
+## 13. Immediate Next Steps
 
 1. **Confirm**: Do you want to start fresh or modify the existing Beloved codebase in-place?
 2. **Assets needed**: New Bona logo / splash / app icon (we can generate these)
