@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { initializeFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
@@ -16,11 +17,8 @@ const firebaseConfig = {
 
 console.log('Firebase Config Debug:', {
     apiKeyLength: firebaseConfig.apiKey?.length,
-    authDomain: firebaseConfig.authDomain,
     projectId: firebaseConfig.projectId,
     hasApiKey: !!firebaseConfig.apiKey,
-    envApiKey: !!process.env.FIREBASE_API_KEY,
-    expoFullConfig: Constants.expoConfig?.extra
 });
 
 // Initialize Firebase
@@ -31,8 +29,12 @@ const auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage)
 });
 
+// Initialize Firestore with Long Polling (Fix for Android Emulator)
 const db = initializeFirestore(app, {
     experimentalForceLongPolling: true,
 });
 
-export { auth, db };
+// Initialize Storage
+const storage = getStorage(app);
+
+export { auth, db, storage };

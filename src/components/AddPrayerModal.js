@@ -3,10 +3,14 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityInd
 import { X, Sparkles, Clock, CheckCircle2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
+import { GRADIENTS, SPACING } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 import { AIService } from '../services/aiService';
 
 const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('Wisdom');
     const [time, setTime] = useState(new Date());
@@ -88,7 +92,7 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>Schedule Prayer</Text>
                         <TouchableOpacity onPress={onClose}>
-                            <X color={COLORS.textSecondary} size={24} />
+                            <X color={colors.textSecondary} size={24} />
                         </TouchableOpacity>
                     </View>
 
@@ -99,7 +103,7 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
                             <TextInput
                                 style={styles.input}
                                 placeholder="e.g., Morning Peace"
-                                placeholderTextColor={COLORS.textSecondary + '80'}
+                                placeholderTextColor={colors.textSecondary + '80'}
                                 value={title}
                                 onChangeText={setTitle}
                             />
@@ -108,7 +112,7 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
                                 onPress={handleGenerateTitle}
                                 disabled={loading}
                             >
-                                <LinearGradient colors={GRADIENTS.primary} style={styles.aiBtnGradient}>
+                                <LinearGradient colors={gradients.primary} style={styles.aiBtnGradient}>
                                     {loading ? <ActivityIndicator size="small" color="#FFF" /> : <Sparkles size={18} color="#FFF" />}
                                 </LinearGradient>
                             </TouchableOpacity>
@@ -131,7 +135,7 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
                         {/* Time Picker */}
                         <Text style={styles.label}>Time</Text>
                         <TouchableOpacity style={styles.timeBtn} onPress={() => setShowTimePicker(true)}>
-                            <Clock size={20} color={COLORS.primary} style={{ marginRight: 10 }} />
+                            <Clock size={20} color={colors.primary} style={{ marginRight: 10 }} />
                             <Text style={styles.timeText}>
                                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Text>
@@ -148,8 +152,8 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
                         )}
 
                         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                            <LinearGradient colors={GRADIENTS.primary} style={styles.saveBtnGradient}>
-                                <CheckCircle2 size={20} color={COLORS.text} style={{ marginRight: 8 }} />
+                            <LinearGradient colors={gradients.primary} style={styles.saveBtnGradient}>
+                                <CheckCircle2 size={20} color={colors.text} style={{ marginRight: 8 }} />
                                 <Text style={styles.saveBtnText}>Save to Schedule</Text>
                             </LinearGradient>
                         </TouchableOpacity>
@@ -160,14 +164,16 @@ const AddPrayerModal = ({ visible, onClose, onSave, initialData }) => {
     );
 };
 
-const styles = StyleSheet.create({
+
+
+const createStyles = (colors) => StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',
         justifyContent: 'flex-end'
     },
     container: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         paddingBottom: 40,
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'rgba(255,255,255,0.05)'
     },
     headerTitle: {
-        color: COLORS.text,
+        color: colors.text,
         fontSize: 20,
         fontWeight: '700'
     },
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
         padding: 24
     },
     label: {
-        color: COLORS.textSecondary,
+        color: colors.textSecondary,
         fontSize: 14,
         fontWeight: '600',
         marginBottom: 10,
@@ -207,7 +213,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 12,
         padding: 16,
-        color: COLORS.text,
+        color: colors.text,
         fontSize: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)'
@@ -237,11 +243,11 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.1)'
     },
     catChipActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary
+        backgroundColor: colors.primary,
+        borderColor: colors.primary
     },
     catText: {
-        color: COLORS.textSecondary,
+        color: colors.textSecondary,
         fontSize: 14,
         fontWeight: '500'
     },
@@ -260,7 +266,7 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.1)'
     },
     timeText: {
-        color: COLORS.text,
+        color: colors.text,
         fontSize: 18,
         fontWeight: '600'
     },

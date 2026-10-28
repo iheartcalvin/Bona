@@ -7,8 +7,13 @@ import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const BannedScreen = () => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const { user, signOut } = useAuth();
     const [appealText, setAppealText] = useState('');
     const [sending, setSending] = useState(false);
@@ -48,7 +53,7 @@ const BannedScreen = () => {
     };
 
     return (
-        <LinearGradient colors={GRADIENTS.dark} style={styles.container}>
+        <LinearGradient colors={gradients.background} style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -57,7 +62,7 @@ const BannedScreen = () => {
                     <ScrollView contentContainerStyle={styles.content}>
                         <View style={styles.header}>
                             <View style={styles.iconContainer}>
-                                <ShieldAlert size={64} color={COLORS.error || '#FF4444'} />
+                                <ShieldAlert size={64} color={colors.error} />
                             </View>
                             <Text style={styles.title}>Account Suspended</Text>
                             <Text style={styles.subtitle}>
@@ -74,7 +79,7 @@ const BannedScreen = () => {
 
                         <View style={styles.actions}>
                             <TouchableOpacity style={styles.contactBtn} onPress={handleContactSupport}>
-                                <Mail size={20} color={COLORS.text} />
+                                <Mail size={20} color={colors.text} />
                                 <Text style={styles.btnText}>Contact Support</Text>
                             </TouchableOpacity>
 
@@ -97,7 +102,7 @@ const BannedScreen = () => {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Explain your case..."
-                                        placeholderTextColor={COLORS.textSecondary}
+                                        placeholderTextColor={colors.textSecondary}
                                         multiline
                                         numberOfLines={4}
                                         value={appealText}
@@ -110,11 +115,11 @@ const BannedScreen = () => {
                                         disabled={sending}
                                     >
                                         {sending ? (
-                                            <ActivityIndicator color={COLORS.text} />
+                                            <ActivityIndicator color={colors.text} />
                                         ) : (
                                             <>
                                                 <Text style={styles.submitBtnText}>Submit Appeal</Text>
-                                                <Send size={18} color={COLORS.text} />
+                                                <Send size={18} color={colors.text} />
                                             </>
                                         )}
                                     </TouchableOpacity>
@@ -123,7 +128,7 @@ const BannedScreen = () => {
                         </View>
 
                         <TouchableOpacity style={styles.signOutBtn} onPress={signOut}>
-                            <LogOut size={20} color={COLORS.textSecondary} />
+                            <LogOut size={20} color={colors.textSecondary} />
                             <Text style={styles.signOutText}>Sign Out</Text>
                         </TouchableOpacity>
                     </ScrollView>
@@ -133,7 +138,7 @@ const BannedScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
     container: { flex: 1 },
     safeArea: { flex: 1 },
     content: { padding: SPACING.xl, alignItems: 'center', paddingBottom: 40 },
@@ -141,25 +146,27 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: 100,
         height: 100,
-        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+        backgroundColor: colors.surface,
         borderRadius: 50,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: SPACING.lg,
         borderWidth: 1,
-        borderColor: 'rgba(255, 68, 68, 0.3)'
+        borderColor: colors.cardBorder
     },
-    title: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm, textAlign: 'center' },
-    subtitle: { fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: SPACING.lg },
+    title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: SPACING.sm, textAlign: 'center' },
+    subtitle: { fontSize: 16, color: colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: SPACING.lg },
     reasonBox: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.surface,
         padding: SPACING.md,
         borderRadius: 12,
         width: '100%',
-        alignItems: 'center'
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.cardBorder
     },
-    reasonLabel: { color: COLORS.error || '#FF4444', fontWeight: '700', marginBottom: 4 },
-    reasonText: { color: COLORS.text, fontSize: 16 },
+    reasonLabel: { color: colors.error, fontWeight: '700', marginBottom: 4 },
+    reasonText: { color: colors.text, fontSize: 16 },
 
     actions: { width: '100%', marginBottom: SPACING.xl },
     contactBtn: {
@@ -167,25 +174,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: colors.surface,
         padding: SPACING.md,
-        borderRadius: 12
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.cardBorder
     },
-    btnText: { color: COLORS.text, fontSize: 16, fontWeight: '600' },
+    btnText: { color: colors.text, fontSize: 16, fontWeight: '600' },
 
     divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: SPACING.xl },
 
-    sectionTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
-    sectionDesc: { fontSize: 14, color: COLORS.textSecondary, marginBottom: SPACING.md },
+    sectionTitle: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: SPACING.xs },
+    sectionDesc: { fontSize: 14, color: colors.textSecondary, marginBottom: SPACING.md },
 
     form: { width: '100%' },
     input: {
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: colors.inputBg,
         borderRadius: 12,
         padding: SPACING.md,
-        color: COLORS.text,
+        color: colors.text,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: colors.cardBorder,
         minHeight: 120,
         marginBottom: SPACING.md
     },
@@ -194,26 +203,26 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         padding: SPACING.md,
         borderRadius: 12
     },
     disabledBtn: { opacity: 0.7 },
-    submitBtnText: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
+    submitBtnText: { color: 'white', fontSize: 16, fontWeight: '700' },
 
     successBox: {
-        backgroundColor: 'rgba(75, 181, 67, 0.1)',
+        backgroundColor: colors.surface,
         padding: SPACING.md,
         borderRadius: 12,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(75, 181, 67, 0.3)'
+        borderColor: colors.success
     },
-    successText: { color: '#4bb543', fontWeight: '600', marginBottom: 8 },
-    linkText: { color: COLORS.primary, textDecorationLine: 'underline' },
+    successText: { color: colors.success, fontWeight: '600', marginBottom: 8 },
+    linkText: { color: colors.primary, textDecorationLine: 'underline' },
 
     signOutBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    signOutText: { color: COLORS.textSecondary, fontSize: 16 }
+    signOutText: { color: colors.textSecondary, fontSize: 16 }
 });
 
 export default BannedScreen;

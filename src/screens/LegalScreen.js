@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
 import { ChevronLeft, Shield, FileText } from 'lucide-react-native';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const LegalScreen = ({ navigation }) => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const [activeTab, setActiveTab] = useState('terms'); // 'terms' | 'privacy'
 
     const terms = `
@@ -44,13 +49,16 @@ We may update this policy periodically. Your continued use of the app signifies 
 
     return (
         <View style={styles.container}>
-            <LinearGradient colors={GRADIENTS.dark} style={styles.gradient}>
+            <LinearGradient colors={gradients.background} style={styles.gradient}>
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <ChevronLeft color={COLORS.text} size={28} />
+                            <ChevronLeft color={colors.text} size={28} />
                         </TouchableOpacity>
-                        <Text style={styles.screenTitle}>Legal Regulations</Text>
+                        <Image
+                            source={require('../../assets/logo.png')}
+                            style={{ width: 110, height: 35, resizeMode: 'contain' }}
+                        />
                         <View style={{ width: 28 }} />
                     </View>
 
@@ -59,7 +67,7 @@ We may update this policy periodically. Your continued use of the app signifies 
                             style={[styles.tab, activeTab === 'terms' && styles.activeTab]}
                             onPress={() => setActiveTab('terms')}
                         >
-                            <FileText size={18} color={activeTab === 'terms' ? COLORS.primary : COLORS.textSecondary} />
+                            <FileText size={18} color={activeTab === 'terms' ? colors.primary : colors.textSecondary} />
                             <Text style={[styles.tabText, activeTab === 'terms' && styles.activeTabText]}>Terms</Text>
                         </TouchableOpacity>
 
@@ -67,7 +75,7 @@ We may update this policy periodically. Your continued use of the app signifies 
                             style={[styles.tab, activeTab === 'privacy' && styles.activeTab]}
                             onPress={() => setActiveTab('privacy')}
                         >
-                            <Shield size={18} color={activeTab === 'privacy' ? COLORS.primary : COLORS.textSecondary} />
+                            <Shield size={18} color={activeTab === 'privacy' ? colors.primary : colors.textSecondary} />
                             <Text style={[styles.tabText, activeTab === 'privacy' && styles.activeTabText]}>Privacy</Text>
                         </TouchableOpacity>
                     </View>
@@ -90,13 +98,13 @@ We may update this policy periodically. Your continued use of the app signifies 
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     gradient: { flex: 1 },
     safeArea: { flex: 1 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, marginTop: Platform.OS === 'ios' ? 32 : 0 },
     backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
-    screenTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text },
+    screenTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
 
     tabBar: {
         flexDirection: 'row',
@@ -112,28 +120,28 @@ const styles = StyleSheet.create({
         gap: 8,
         paddingVertical: 12,
         borderRadius: 12,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)'
     },
     activeTab: {
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
         backgroundColor: 'rgba(108, 99, 255, 0.1)'
     },
-    tabText: { color: COLORS.textSecondary, fontWeight: '600' },
-    activeTabText: { color: COLORS.primary },
+    tabText: { color: colors.textSecondary, fontWeight: '600' },
+    activeTabText: { color: colors.primary },
 
     content: { padding: SPACING.lg, paddingBottom: 50 },
     legalBox: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         padding: 24,
         borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)'
     },
-    legalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 20 },
-    legalText: { color: COLORS.textSecondary, fontSize: 16, lineHeight: 26 },
-    lastUpdated: { textAlign: 'center', color: COLORS.textSecondary, opacity: 0.4, fontSize: 12, marginTop: 32 }
+    legalTitle: { fontSize: 22, fontWeight: '800', color: colors.text, marginBottom: 20 },
+    legalText: { color: colors.textSecondary, fontSize: 16, lineHeight: 26 },
+    lastUpdated: { textAlign: 'center', color: colors.textSecondary, opacity: 0.4, fontSize: 12, marginTop: 32 }
 });
 
 export default LegalScreen;

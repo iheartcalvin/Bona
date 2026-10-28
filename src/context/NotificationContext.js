@@ -1,4 +1,23 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import { Platform } from 'react-native';
+import * as Device from 'expo-device';
+let Notifications = null;
+try {
+    Notifications = require('expo-notifications');
+    if (Notifications && typeof Notifications.setNotificationHandler === 'function') {
+        Notifications.setNotificationHandler({
+            handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: true,
+            }),
+        });
+    }
+} catch (e) {
+    console.log('Notifications not available in Expo Go');
+}
+
+import Constants from 'expo-constants';
 import { auth } from '../services/firebaseConfig';
 import { UserService } from '../services/userService';
 import { SpaceService } from '../services/SpaceService';
@@ -8,6 +27,10 @@ const NotificationContext = createContext();
 export const NotificationProvider = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [user, setUser] = useState(null);
+    const [expoPushToken, setExpoPushToken] = useState('');
+    const [notification, setNotification] = useState(false);
+    const notificationListener = useRef();
+    const responseListener = useRef();
 
     // Initial loading or persisting can be handled here if needed
     // For now, simple in-memory state derived from subscriptions
@@ -15,10 +38,37 @@ export const NotificationProvider = ({ children }) => {
     const [userProfile, setUserProfile] = useState(null);
 
     useEffect(() => {
-        const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+        const unsubscribeAuth = auth?.onAuthStateChanged ? auth.onAuthStateChanged((currentUser) => {
             setUser(currentUser);
+        }) : () => {};
+
+        // Register for push notifications
+        registerForPushNotificationsAsync().then(token => {
+            if (token) setExpoPushToken(token);
         });
-        return () => unsubscribeAuth();
+
+        // Listeners for incoming notifications
+        if (Notifications?.addNotificationReceivedListener) {
+            notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+                setNotification(notification);
+            });
+        }
+
+        if (Notifications?.addNotificationResponseReceivedListener) {
+            responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+                console.log(response);
+            });
+        }
+
+        return () => {
+            unsubscribeAuth();
+            if (notificationListener.current) {
+                notificationListener.current.remove();
+            }
+            if (responseListener.current) {
+                responseListener.current.remove();
+            }
+        };
     }, []);
 
     // Subscribe to Profile for lastNotificationViewedAt
@@ -33,6 +83,14 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [user]);
 
+    // Save token when user logs in
+    useEffect(() => {
+        if (user && expoPushToken) {
+            UserService.savePushToken(user.uid, expoPushToken);
+        }
+    }, [user, expoPushToken]);
+
+
     useEffect(() => {
         if (!user) {
             setUnreadCount(0);
@@ -45,99 +103,94 @@ export const NotificationProvider = ({ children }) => {
 
         // Helper to recalculate count
         const calculateCount = () => {
+            // ... existing count logic kept mostly same, but we handle scheduling separately
             if (!user) return;
             let count = 0;
-            // Use Profile data
             const lastViewed = userProfile?.lastNotificationViewedAt ? new Date(userProfile.lastNotificationViewedAt).getTime() : 0;
-            const now = new Date();
 
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-            // 1. Unread User Notifications (Firestore State)
-            // Even if seen before, if read=false in DB, we count it. 
-            // The screen view updates read=true, so this self-corrects.
+            // 1. Unread User Notifications
             count += userNotifications.filter(n => !n.read).length;
 
-            // 2. Active Spaces
-            // Count if created AFTER last viewed? 
-            // Or just count them if they are live? Usually Live badges stay.
-            // But user asked to hide if viewed.
-            // Let's assume we check if the space started AFTER lastViewed.
-            // Space object might need createdAt. Assuming it has it or we just use length if strictly "new".
-            // If we strictly want to hide badge after viewing screen:
-            // Filter spaces where createdAt > lastViewed.
+            // 2. Active Spaces (New ones only)
             const newSpaces = activeSpaces.filter(s => {
                 const created = s.createdAt?.toDate ? s.createdAt.toDate().getTime() : (s.startedAt || 0);
                 return created > lastViewed;
             });
             count += newSpaces.length;
 
-            // 3. Schedule Alerts
-            if (prayerSchedule.length > 0) {
-                const parseTimeToMinutes = (timeStr) => {
-                    if (!timeStr) return -1;
-                    const [time, modifier] = timeStr.split(' ');
+            setUnreadCount(count);
+        };
+
+        const schedulePrayers = async (schedules) => {
+            // 1. Cancel all existing scheduled notifications
+            await Notifications.cancelAllScheduledNotificationsAsync();
+
+            // 2. Check if notifications are enabled
+            if (user?.settings?.notifications === false) {
+                console.log("Notifications are disabled by user settings.");
+                return;
+            }
+
+            // 3. Schedule new ones
+            schedules.forEach(async (item) => {
+                if (!item.time) return;
+
+                const parseTimeComponents = (timeStr) => {
+                    const [time, modifier] = timeStr.trim().split(' ');
                     let [hours, minutes] = time.split(':').map(Number);
                     if (modifier) {
                         if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
                         if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
                     }
-                    return hours * 60 + minutes;
+                    return { hours, minutes };
                 };
 
-                const getPrayerTimeToday = (minutes) => {
-                    const d = new Date();
-                    d.setHours(Math.floor(minutes / 60));
-                    d.setMinutes(minutes % 60);
-                    d.setSeconds(0);
-                    return d.getTime();
-                };
+                const { hours, minutes } = parseTimeComponents(item.time);
 
-                prayerSchedule.forEach(item => {
-                    const prayerMinutes = parseTimeToMinutes(item.time);
-                    const prayerTimeMs = getPrayerTimeToday(prayerMinutes);
-
-                    let isAlert = false;
-
-                    // Missed: Time passed > 15 mins
-                    if (prayerMinutes < currentMinutes && (currentMinutes - prayerMinutes) > 15) {
-                        isAlert = true;
-                    }
-                    // Upcoming: Within 60 mins
-                    else if (prayerMinutes > currentMinutes && (prayerMinutes - currentMinutes) <= 60) {
-                        isAlert = true;
-                    }
-
-                    // Only count if the "Event" happened AFTER the last view 
-                    // i.e. The alert became valid after we last cleared notifications.
-                    // This is tricky for recurring types.
-                    // Simplified: if lastViewed was recent (e.g. within last hour), maybe we don't show?
-                    // Better: If prayerTimeMs > lastViewed (it's a new event in the future we haven't acknowledged)
-                    // OR if we missed it and the "missed event" (e.g. prayerTime + 15m) > lastViewed.
-
-                    if (isAlert) {
-                        // Estimated "Notification Time"
-                        // Upcoming: 60 mins before. Missed: 15 mins after.
-                        let notifTime = prayerTimeMs;
-                        if (prayerMinutes < currentMinutes) {
-                            notifTime = prayerTimeMs + (15 * 60 * 1000); // Triggered at +15m
-                        } else {
-                            notifTime = prayerTimeMs - (60 * 60 * 1000); // Triggered at -60m
-                        }
-
-                        if (notifTime > lastViewed) {
-                            count++;
-                        }
-                    }
+                // --- A. EXACT TIME ALERT (The "Alarm") ---
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: `It's time for ${item.title || 'Prayer'}`,
+                        body: `Time to pray! Tap to mark as done.`,
+                        sound: true, // Default sound
+                        priority: Notifications.AndroidNotificationPriority.MAX, // High priority
+                        vibrate: [0, 500, 200, 500], // Aggressive vibration
+                        data: { type: 'prayer', prayerId: item.id, action: 'pray_now' },
+                    },
+                    trigger: { hour: hours, minute: minutes, repeats: true },
                 });
-            }
-            setUnreadCount(count);
+
+                // --- B. 5 MINUTES BEFORE REMINDER ---
+                // Calculate time 5 mins back
+                let remindHours = hours;
+                let remindMinutes = minutes - 5;
+                if (remindMinutes < 0) {
+                    remindMinutes += 60;
+                    remindHours -= 1;
+                    if (remindHours < 0) remindHours += 24;
+                }
+
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: `Upcoming: ${item.title || 'Prayer'}`,
+                        body: `5 minutes remaining before ${item.title}. Prepare yourself.`,
+                        sound: true,
+                        priority: Notifications.AndroidNotificationPriority.HIGH,
+                        data: { type: 'prayer_reminder', prayerId: item.id },
+                    },
+                    trigger: { hour: remindHours, minute: remindMinutes, repeats: true },
+                });
+            });
+
+            console.log(`Scheduled ${schedules.length * 2} notifications (exact + reminder)`);
         };
+
 
         // Subscriptions
         const unsubSchedule = UserService.subscribeToPrayerSchedule(user.uid, (data) => {
             prayerSchedule = data;
             calculateCount();
+            schedulePrayers(data);
         });
 
         const unsubSpaces = SpaceService.subscribeToActiveSpaces((data) => {
@@ -150,7 +203,6 @@ export const NotificationProvider = ({ children }) => {
             calculateCount();
         });
 
-        // Trigger calculation when profile updates (timestamp changes)
         calculateCount();
 
         return () => {
@@ -158,10 +210,55 @@ export const NotificationProvider = ({ children }) => {
             unsubSpaces();
             unsubNotifs();
         };
-    }, [user, userProfile]);
+    }, [user, userProfile, user?.settings?.notifications]); // Re-run when settings change
+
+    async function registerForPushNotificationsAsync() {
+        if (!Notifications || !Notifications.setNotificationChannelAsync) return null;
+        if (Constants.appOwnership === 'expo') {
+            // Push notifications are removed from Expo Go on Android; prevent warning toast
+            return null;
+        }
+        let token;
+
+        if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'Bona Alerts',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 500, 250, 500],
+                lightColor: '#6366F1',
+                lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+                bypassDnd: true,
+            });
+        }
+
+        if (Device.isDevice) {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+            if (finalStatus !== 'granted') {
+                console.log('Permission not granted for notifications');
+                return null;
+            }
+            try {
+                const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+                token = (await Notifications.getExpoPushTokenAsync({
+                    projectId: projectId,
+                })).data;
+                console.log("Expo Push Token:", token);
+            } catch (e) {
+                console.error("Error fetching push token:", e);
+            }
+        }
+        return token;
+    }
+
+    const value = React.useMemo(() => ({ unreadCount }), [unreadCount]);
 
     return (
-        <NotificationContext.Provider value={{ unreadCount }}>
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     );

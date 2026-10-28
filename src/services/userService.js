@@ -18,9 +18,49 @@ import {
     writeBatch,
     getCountFromServer
 } from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from './firebaseConfig';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export const UserService = {
+    // Check if username is available
+    checkUsernameAvailability: async (username) => {
+        if (!username) return false;
+        try {
+            const q = query(
+                collection(db, 'users'),
+                where('username', '==', username.toLowerCase()),
+                limit(1)
+            );
+            const snapshot = await getDocs(q);
+            return snapshot.empty;
+        } catch (error) {
+            console.error("Error checking username:", error);
+            throw error;
+        }
+    },
+
+    // Get user email by username (For login)
+    getUserByUsername: async (username) => {
+        if (!username) return null;
+        try {
+            const q = query(
+                collection(db, 'users'),
+                where('username', '==', username.toLowerCase()),
+                limit(1)
+            );
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                const userDoc = snapshot.docs[0];
+                return { uid: userDoc.id, ...userDoc.data() };
+            }
+            return null;
+        } catch (error) {
+            console.error("Error fetching user by username:", error);
+            throw error;
+        }
+    },
+
     // Create initial user profile on Sign Up
     createUserProfile: async (uid, userData) => {
         try {
@@ -101,6 +141,38 @@ export const UserService = {
             throw error;
         }
     },
+
+    // Upload Profile Image
+    // Upload Profile Image (Base64 Fallback for Firestore)
+    uploadProfileImage: async (uid, uri) => {
+        try {
+            // Read file as Base64
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: 'base64',
+            });
+
+            // Return Data URI to be saved as the photoURL
+            return `data:image/jpeg;base64,${base64}`;
+        } catch (error) {
+            console.error("Error converting profile image:", error);
+            throw error;
+        }
+    },
+
+    // Save expo push token
+    savePushToken: async (uid, token) => {
+        if (!uid || !token) return;
+        try {
+            await updateDoc(doc(db, 'users', uid), {
+                pushToken: token,
+                updatedAt: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error("Error saving push token:", error);
+            // Don't throw, just log
+        }
+    },
+
 
     // Update User Mood
     updateUserMood: async (uid, mood) => {
@@ -416,6 +488,28 @@ export const UserService = {
             console.error("Error subscribing to prayer history:", error);
             callback([]);
         });
+    },
+
+    // Fetch extended prayer history for analytics (e.g., last 30 days)
+    getExtendedPrayerHistory: async (uid, days = 30) => {
+        if (!uid) return [];
+        const historyRef = collection(db, 'users', uid, 'prayerHistory');
+
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        try {
+            const q = query(
+                historyRef,
+                where('completedAt', '>=', startDate),
+                orderBy('completedAt', 'desc')
+            );
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error("Error fetching extended prayer history:", error);
+            return [];
+        }
     },
 
     // Mark Prayer as Complete

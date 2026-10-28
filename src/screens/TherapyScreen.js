@@ -9,8 +9,13 @@ import { ChatService } from '../services/ChatService';
 import { AIService } from '../services/aiService';
 import { UserService } from '../services/userService';
 import NotificationBell from '../components/NotificationBell';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const TherapyScreen = ({ navigation, route }) => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
@@ -118,7 +123,7 @@ const TherapyScreen = ({ navigation, route }) => {
                         <Text style={styles.statusText}>Based on your mood: {userProfile?.mood?.label || userProfile?.mood || 'Neutral'}</Text>
                     </View>
                 </View>
-                <NotificationBell color={COLORS.textSecondary} />
+                <NotificationBell color={colors.textSecondary} />
             </View>
 
             <FlatList
@@ -129,7 +134,7 @@ const TherapyScreen = ({ navigation, route }) => {
                 contentContainerStyle={styles.listContent}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
                 ListEmptyComponent={
-                    !loading && <Text style={{ textAlign: 'center', color: COLORS.textSecondary, marginTop: 20 }}>Start a conversation...</Text>
+                    !loading && <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 20 }}>Start a conversation...</Text>
                 }
                 ListFooterComponent={sending ? (
                     <View style={styles.typingIndicator}>
@@ -143,7 +148,7 @@ const TherapyScreen = ({ navigation, route }) => {
                     <TextInput
                         style={styles.input}
                         placeholder="Talk to your spiritual companion..."
-                        placeholderTextColor={COLORS.textSecondary}
+                        placeholderTextColor={colors.textSecondary}
                         value={inputText}
                         onChangeText={setInputText}
                         multiline
@@ -161,16 +166,16 @@ const TherapyScreen = ({ navigation, route }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         padding: SPACING.lg, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)'
     },
-    headerTitle: { color: COLORS.text, fontSize: 24, fontWeight: '800' },
+    headerTitle: { color: colors.text, fontSize: 24, fontWeight: '800' },
     statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-    onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success, marginRight: 6 },
-    statusText: { color: COLORS.textSecondary, fontSize: 12 },
+    onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success, marginRight: 6 },
+    statusText: { color: colors.textSecondary, fontSize: 12 },
 
     listContent: { padding: SPACING.lg, paddingBottom: 100 },
     messageRow: { marginBottom: 16, flexDirection: 'row', alignItems: 'flex-end' },
@@ -179,25 +184,25 @@ const styles = StyleSheet.create({
 
     botAvatar: {
         width: 32, height: 32, borderRadius: 16,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         justifyContent: 'center', alignItems: 'center',
         marginRight: 8, marginBottom: 4
     },
 
     bubble: { maxWidth: '80%', padding: 12, borderRadius: 20 },
-    userBubble: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-    botBubble: { backgroundColor: COLORS.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+    userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
+    botBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
 
     messageText: { fontSize: 16, lineHeight: 22 },
     userText: { color: 'white' },
-    botText: { color: COLORS.text },
+    botText: { color: colors.text },
 
     timestamp: { fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 4, alignSelf: 'flex-end' },
 
     inputContainer: {
         flexDirection: 'row', alignItems: 'center',
         padding: SPACING.lg,
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)',
         marginBottom: Platform.OS === 'ios' ? 0 : 20
     },
@@ -207,17 +212,17 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        color: COLORS.text,
+        color: colors.text,
         maxHeight: 100,
         marginRight: 10
     },
     sendBtn: {
         width: 44, height: 44, borderRadius: 22,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         justifyContent: 'center', alignItems: 'center'
     },
     typingIndicator: { padding: 10, marginLeft: 40 },
-    typingText: { color: COLORS.textSecondary, fontStyle: 'italic', fontSize: 12 }
+    typingText: { color: colors.textSecondary, fontStyle: 'italic', fontSize: 12 }
 });
 
 export default TherapyScreen;

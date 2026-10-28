@@ -8,8 +8,13 @@ import { auth } from '../services/firebaseConfig';
 import { UserService } from '../services/userService';
 import { SpaceService } from '../services/SpaceService';
 import UserProfileModal from '../components/UserProfileModal';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const NotificationsScreen = ({ navigation }) => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const [notifications, setNotifications] = useState([]);
     const [schedule, setSchedule] = useState([]);
     const [activeSpaces, setActiveSpaces] = useState([]);
@@ -181,11 +186,11 @@ const NotificationsScreen = ({ navigation }) => {
 
     const getTypeIcon = (type) => {
         switch (type) {
-            case 'live': return <Video size={20} color={COLORS.primary} />;
-            case 'fellowship': return <Users size={20} color={COLORS.secondary} />;
-            case 'prayer': return <Clock size={20} color={COLORS.error} />;
-            case 'event': return <Calendar size={20} color={COLORS.accent} />;
-            default: return <Bell size={20} color={COLORS.textSecondary} />;
+            case 'live': return <Video size={20} color={colors.primary} />;
+            case 'fellowship': return <Users size={20} color={colors.secondary} />;
+            case 'prayer': return <Clock size={20} color={colors.error} />;
+            case 'event': return <Calendar size={20} color={colors.accent} />;
+            default: return <Bell size={20} color={colors.textSecondary} />;
         }
     };
 
@@ -240,12 +245,12 @@ const NotificationsScreen = ({ navigation }) => {
                                 <Text style={styles.actionBtnText}>Accept</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.actionBtn, styles.declineBtn]} onPress={() => handleRejectFriend(item.id)}>
-                                <X size={16} color={COLORS.textSecondary} />
-                                <Text style={[styles.actionBtnText, { color: COLORS.textSecondary }]}>Decline</Text>
+                                <X size={16} color={colors.textSecondary} />
+                                <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>Decline</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.05)' }]} onPress={() => handleViewProfile(item.data.fromUid)}>
-                                <Users size={16} color={COLORS.primary} />
-                                <Text style={[styles.actionBtnText, { color: COLORS.primary }]}>View</Text>
+                                <Users size={16} color={colors.primary} />
+                                <Text style={[styles.actionBtnText, { color: colors.primary }]}>View</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -258,7 +263,7 @@ const NotificationsScreen = ({ navigation }) => {
                                 }}
                             >
                                 <Text style={styles.singleActionText}>{item.action}</Text>
-                                <ArrowRight size={14} color={COLORS.primary} />
+                                <ArrowRight size={14} color={colors.primary} />
                             </TouchableOpacity>
                         )
                     )}
@@ -272,7 +277,7 @@ const NotificationsScreen = ({ navigation }) => {
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <ChevronLeft color={COLORS.text} size={28} />
+                    <ChevronLeft color={colors.text} size={28} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
                 <TouchableOpacity onPress={handleClearAll}>
@@ -303,25 +308,25 @@ const NotificationsScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 15,
-        backgroundColor: COLORS.background
+        backgroundColor: colors.background
     },
-    backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface, justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
-    markReadText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
+    backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
+    markReadText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
     listContent: { padding: 20, paddingBottom: 100 },
     listHeader: { marginBottom: 25 },
-    sectionTitle: { color: COLORS.text, fontSize: 24, fontWeight: '800' },
-    subTitle: { color: COLORS.textSecondary, fontSize: 14, marginTop: 4 },
+    sectionTitle: { color: colors.text, fontSize: 24, fontWeight: '800' },
+    subTitle: { color: colors.textSecondary, fontSize: 14, marginTop: 4 },
     notificationCard: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderRadius: 24,
         padding: 16,
         marginBottom: 16,
@@ -344,9 +349,9 @@ const styles = StyleSheet.create({
     },
     contentContainer: { flex: 1 },
     titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-    notifTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
-    notifTime: { color: COLORS.textSecondary, fontSize: 12 },
-    notifMessage: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 12 },
+    notifTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+    notifTime: { color: colors.textSecondary, fontSize: 12 },
+    notifMessage: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 12 },
     unreadDot: {
         position: 'absolute',
         top: -4,
@@ -354,9 +359,9 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderWidth: 2,
-        borderColor: COLORS.surface
+        borderColor: colors.surface
     },
     requestActions: { flexDirection: 'row', gap: 10 },
     actionBtn: {
@@ -367,7 +372,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         gap: 6
     },
-    acceptBtn: { backgroundColor: COLORS.primary },
+    acceptBtn: { backgroundColor: colors.primary },
     declineBtn: { backgroundColor: 'rgba(255,255,255,0.05)' },
     actionBtnText: { color: 'white', fontSize: 13, fontWeight: '700' },
     singleActionBtn: {
@@ -375,7 +380,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4
     },
-    singleActionText: { color: COLORS.primary, fontSize: 14, fontWeight: '700' }
+    singleActionText: { color: colors.primary, fontSize: 14, fontWeight: '700' }
 });
 
 export default NotificationsScreen;

@@ -65,14 +65,16 @@ export const SpaceService = {
                 // Soft fail: let them see it might be closed, or handle in UI
             }
 
-            // Add user as listener
+            const isHost = channelDoc.data().hostId === user.uid;
+
+            // Add user as participant (host or listener)
             await setDoc(doc(db, 'channels', channelId, 'participants', user.uid), {
                 uid: user.uid,
                 name: user.displayName || 'Guest',
                 avatar: user.photoURL || null,
-                role: 'listener',
+                role: isHost ? 'host' : 'listener',
                 isHandRaised: false,
-                isMuted: true,
+                isMuted: isHost ? false : true,
                 joinedAt: serverTimestamp()
             });
 
@@ -105,9 +107,9 @@ export const SpaceService = {
                     });
                 } else {
                     // Update participant count for non-hosts
-                    const currentCount = data.participantsCount || 0;
+                    // Note: Use field value increment directly without fetching count first to be safe
                     await updateDoc(channelRef, {
-                        participantsCount: increment(currentCount > 0 ? -1 : 0)
+                        participantsCount: increment(-1)
                     });
                 }
 
@@ -125,8 +127,12 @@ export const SpaceService = {
         try {
             await updateDoc(doc(db, 'channels', channelId), {
                 isActive: false,
+                participantsCount: 0, // Ensure it's hidden from dashboard
                 endedAt: serverTimestamp()
             });
+
+            // Clean up: could optionally delete all participants, 
+            // but isActive=false is enough for UI to bounce them.
         } catch (error) {
             console.error('Error ending space:', error);
             throw error;
@@ -178,10 +184,13 @@ export const SpaceService = {
     // Promote to Speaker (Host only)
     promoteToSpeaker: async (channelId, targetUid) => {
         try {
+            const channelDoc = await getDoc(doc(db, 'channels', channelId));
+            const isHost = channelDoc.data().hostId === targetUid;
+
             await updateDoc(doc(db, 'channels', channelId, 'participants', targetUid), {
-                role: 'speaker',
-                isHandRaised: false, // Clear hand raise
-                isMuted: true // Promote but keep muted initially until they unmute
+                role: isHost ? 'host' : 'speaker',
+                isHandRaised: false,
+                isMuted: false // If promoted, usually they want to speak immediately
             });
         } catch (error) {
             console.error('Error promoting user:', error);
@@ -191,6 +200,7 @@ export const SpaceService = {
     // Demote to Listener (Host only)
     demoteToListener: async (channelId, targetUid) => {
         try {
+            // We still demote them to listener role in participants list, but UI will check hostId
             await updateDoc(doc(db, 'channels', channelId, 'participants', targetUid), {
                 role: 'listener',
                 isMuted: true,

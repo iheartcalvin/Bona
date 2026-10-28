@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, Platform, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Heart, Users, Coffee, Gift, X as CloseIcon, MapPin, Clock, Bell, Info, Copy, ShieldCheck } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
@@ -9,10 +9,31 @@ import { doc, getDoc, collection, onSnapshot, query, orderBy } from 'firebase/fi
 import { db } from '../services/firebaseConfig';
 
 import NotificationBell from '../components/NotificationBell';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const EventsScreen = ({ navigation }) => {
-    const [selectedEvent, setSelectedEvent] = React.useState(null);
-    const [showDonateModal, setShowDonateModal] = React.useState(false);
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    const insets = useSafeAreaInsets();
+
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showDonateModal, setShowDonateModal] = useState(false);
+
+    // Fix Android Modal Scroll Freeze (Only needed on Android)
+    const [isReady, setIsReady] = useState(Platform.OS === 'ios');
+
+    useEffect(() => {
+        if (showDonateModal) {
+            if (Platform.OS === 'android') {
+                setIsReady(false);
+                const timer = setTimeout(() => setIsReady(true), 150);
+                return () => clearTimeout(timer);
+            } else {
+                setIsReady(true);
+            }
+        }
+    }, [showDonateModal]);
     const [paymentConfig, setPaymentConfig] = React.useState(null);
     const [sponsors, setSponsors] = React.useState([]);
     const [charityEvents, setCharityEvents] = React.useState([]);
@@ -81,7 +102,7 @@ const EventsScreen = ({ navigation }) => {
                         <Text style={styles.headerTitle}>Act of Love</Text>
                         <Text style={styles.headerSubtitle}>Give and it shall be given unto you.</Text>
                     </View>
-                    <NotificationBell color={COLORS.textSecondary} />
+                    <NotificationBell color={colors.textSecondary} />
                 </View>
 
                 <Text style={styles.sectionTitle}>Charity Events</Text>
@@ -111,7 +132,7 @@ const EventsScreen = ({ navigation }) => {
                                     }}
                                 >
                                     <LinearGradient colors={GRADIENTS.warmth} style={styles.donateGradient}>
-                                        <Heart color={COLORS.text} size={20} />
+                                        <Heart color={colors.text} size={20} />
                                         <Text style={styles.donateText}>Donate Now</Text>
                                     </LinearGradient>
                                 </TouchableOpacity>
@@ -121,9 +142,9 @@ const EventsScreen = ({ navigation }) => {
                 }
 
                 <View style={styles.devSection}>
-                    <LinearGradient colors={GRADIENTS.dark} style={styles.devGradient}>
+                    <LinearGradient colors={gradients.background} style={styles.devGradient}>
                         <View style={styles.devHeader}>
-                            <Coffee color={COLORS.accent} size={32} />
+                            <Coffee color={colors.accent} size={32} />
                             <Text style={styles.devTitle}>{devSupport?.title || "Support the Vision"}</Text>
                         </View>
                         <Text style={styles.devText}>{devSupport?.description || "Help our engineers maintain and improve Beloved for everyone."}</Text>
@@ -135,136 +156,124 @@ const EventsScreen = ({ navigation }) => {
                             }}
                         >
                             <Text style={styles.devButtonText}>Support Engineers</Text>
-                            <Gift color={COLORS.accent} size={20} />
+                            <Gift color={colors.accent} size={20} />
                         </TouchableOpacity>
                     </LinearGradient>
                 </View>
             </ScrollView >
 
-            <Modal visible={showDonateModal} animationType="slide" presentationStyle="fullScreen">
-                <LinearGradient colors={GRADIENTS.dark} style={styles.modalContainer}>
-                    <SafeAreaView style={{ flex: 1 }}>
+            <Modal visible={showDonateModal} animationType="slide" transparent={false}>
+                <LinearGradient colors={gradients.background} style={styles.modalContainer}>
+                    <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom }} collapsable={false}>
                         <View style={styles.modalHeader}>
                             <TouchableOpacity onPress={() => setShowDonateModal(false)}>
-                                <CloseIcon color={COLORS.text} size={28} />
+                                <CloseIcon color={colors.text} size={28} />
                             </TouchableOpacity>
                             <Text style={styles.modalHeaderTitle}>Contribute</Text>
                             <View style={{ width: 28 }} />
                         </View>
 
-                        <ScrollView contentContainerStyle={styles.modalScroll}>
-                            {selectedEvent && (
-                                <>
-                                    <Image source={{ uri: selectedEvent.image }} style={styles.detailImage} />
-                                    <View style={styles.detailBody}>
-                                        <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
+                        {isReady && (
+                            <ScrollView
+                                style={{ flex: 1 }}
+                                contentContainerStyle={[styles.modalScroll, { flexGrow: 1, paddingBottom: 40 }]}
+                                removeClippedSubviews={false}
+                                nestedScrollEnabled={true}
+                            >
+                                {selectedEvent && (
+                                    <>
+                                        <Image source={{ uri: selectedEvent.image }} style={styles.detailImage} />
+                                        <View style={styles.detailBody}>
+                                            <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
 
-                                        <View style={styles.metaRow}>
-                                            <View style={styles.metaItem}>
-                                                <MapPin size={16} color={COLORS.accent} />
-                                                <Text style={styles.metaText}>{selectedEvent.location}</Text>
-                                            </View>
-                                            <View style={styles.metaItem}>
-                                                <Clock size={16} color={COLORS.accent} />
-                                                <Text style={styles.metaText}>{selectedEvent.time}</Text>
-                                            </View>
-                                        </View>
-
-                                        <Text style={styles.descriptionText}>{selectedEvent.description}</Text>
-
-                                        <View style={styles.sponsorsSection}>
-                                            <Text style={styles.sponsorsTitle}>Our Valued Sponsors</Text>
-                                            {sponsors.length > 0 ? (
-                                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sponsorsList}>
-                                                    {sponsors.map(sponsor => (
-                                                        <TouchableOpacity
-                                                            key={sponsor.id}
-                                                            style={styles.sponsorCard}
-                                                            onPress={() => setSelectedSponsor(sponsor)}
-                                                            activeOpacity={0.7}
-                                                        >
-                                                            <View style={styles.sponsorLogoWrapper}>
-                                                                <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} />
-                                                            </View>
-                                                            <Text style={styles.sponsorName}>{sponsor.name}</Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </ScrollView>
-                                            ) : (
-                                                <View style={styles.noSponsorsCard}>
-                                                    <Heart size={20} color={COLORS.textSecondary} />
-                                                    <Text style={styles.noSponsorsText}>Sponsors are the pillars of our mission.</Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={styles.metaItem}>
+                                                    <MapPin size={16} color={colors.accent} />
+                                                    <Text style={styles.metaText}>{selectedEvent.location}</Text>
                                                 </View>
-                                            )}
-                                        </View>
-
-                                        {selectedEvent.showProgress !== false && (
-                                            <View style={styles.liveProgressCard}>
-                                                <View style={styles.progressHeader}>
-                                                    <Text style={styles.progressMainLabel}>Live Funding Progress</Text>
-                                                    <Text style={styles.percentageText}>{Math.round(getProgress(selectedEvent.raised, selectedEvent.goal))}%</Text>
-                                                </View>
-                                                <View style={styles.fullProgressBar}>
-                                                    <View style={[styles.fullProgressFill, { width: `${getProgress(selectedEvent.raised, selectedEvent.goal)}%` }]} />
-                                                </View>
-                                                <View style={styles.statsRow}>
-                                                    <View>
-                                                        <Text style={styles.statLabel}>Raised</Text>
-                                                        <Text style={styles.statValue}>${selectedEvent.raised.toLocaleString()}</Text>
-                                                    </View>
-                                                    <View style={{ alignItems: 'flex-end' }}>
-                                                        <Text style={styles.statLabel}>Goal</Text>
-                                                        <Text style={styles.statValue}>${selectedEvent.goal.toLocaleString()}</Text>
-                                                    </View>
+                                                <View style={styles.metaItem}>
+                                                    <Clock size={16} color={colors.accent} />
+                                                    <Text style={styles.metaText}>{selectedEvent.time}</Text>
                                                 </View>
                                             </View>
-                                        )}
 
-                                        <View style={styles.paymentSection}>
-                                            <Text style={styles.paymentTitle}>Scan to Donate</Text>
+                                            <Text style={styles.descriptionText}>{selectedEvent.description}</Text>
 
-                                            {paymentConfig?.paymentQrUrl ? (
-                                                <View style={styles.qrDisplayContainer}>
-                                                    <View style={styles.qrImageWrapper}>
-                                                        <Image
-                                                            source={{ uri: paymentConfig.paymentQrUrl }}
-                                                            style={styles.qrImage}
-                                                            resizeMode="contain"
-                                                        />
-                                                    </View>
-                                                    {paymentConfig.paymentInstructions && (
-                                                        <View style={styles.instructionsWrapper}>
-                                                            <Text style={styles.instructionsTitle}>How to Pay:</Text>
-                                                            <Text style={styles.instructionsText}>{paymentConfig.paymentInstructions}</Text>
-                                                        </View>
-                                                    )}
-                                                    {paymentConfig.phoneNumber && (
-                                                        <View style={styles.directPayInfo}>
-                                                            <View>
-                                                                <Text style={styles.directPayLabel}>Lipa Namba / Phone:</Text>
-                                                                <Text style={styles.directPayValue}>{paymentConfig.phoneNumber}</Text>
-                                                            </View>
+                                            <View style={styles.sponsorsSection}>
+                                                <Text style={styles.sponsorsTitle}>Our Valued Sponsors</Text>
+                                                {sponsors.length > 0 ? (
+                                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sponsorsList}>
+                                                        {sponsors.map(sponsor => (
                                                             <TouchableOpacity
-                                                                style={styles.copyButton}
-                                                                onPress={() => handleCopy(paymentConfig.phoneNumber)}
+                                                                key={sponsor.id}
+                                                                style={styles.sponsorCard}
+                                                                onPress={() => setSelectedSponsor(sponsor)}
+                                                                activeOpacity={0.7}
                                                             >
-                                                                <Copy size={20} color={COLORS.primary} />
+                                                                <View style={styles.sponsorLogoWrapper}>
+                                                                    <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} />
+                                                                </View>
+                                                                <Text style={styles.sponsorName}>{sponsor.name}</Text>
                                                             </TouchableOpacity>
+                                                        ))}
+                                                    </ScrollView>
+                                                ) : (
+                                                    <View style={styles.noSponsorsCard}>
+                                                        <Heart size={20} color={colors.textSecondary} />
+                                                        <Text style={styles.noSponsorsText}>Sponsors are the pillars of our mission.</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+
+                                            {selectedEvent.showProgress !== false && (
+                                                <View style={styles.liveProgressCard}>
+                                                    <View style={styles.progressHeader}>
+                                                        <Text style={styles.progressMainLabel}>Live Funding Progress</Text>
+                                                        <Text style={styles.percentageText}>{Math.round(getProgress(selectedEvent.raised, selectedEvent.goal))}%</Text>
+                                                    </View>
+                                                    <View style={styles.fullProgressBar}>
+                                                        <View style={[styles.fullProgressFill, { width: `${getProgress(selectedEvent.raised, selectedEvent.goal)}%` }]} />
+                                                    </View>
+                                                    <View style={styles.statsRow}>
+                                                        <View>
+                                                            <Text style={styles.statLabel}>Raised</Text>
+                                                            <Text style={styles.statValue}>${selectedEvent.raised.toLocaleString()}</Text>
                                                         </View>
-                                                    )}
-                                                </View>
-                                            ) : (
-                                                <View style={styles.emptyContainer}>
-                                                    <Info size={48} color={COLORS.textSecondary} />
-                                                    <Text style={styles.emptyText}>Payment information is currently unavailable.</Text>
+                                                        <View style={{ alignItems: 'flex-end' }}>
+                                                            <Text style={styles.statLabel}>Goal</Text>
+                                                            <Text style={styles.statValue}>${selectedEvent.goal.toLocaleString()}</Text>
+                                                        </View>
+                                                    </View>
                                                 </View>
                                             )}
+
+                                            <View style={styles.paymentSection}>
+                                                <Text style={styles.paymentTitle}>Make a Donation</Text>
+
+                                                <TouchableOpacity
+                                                    style={[styles.donateButton, { marginBottom: 20 }]}
+                                                    onPress={() => {
+                                                        setShowDonateModal(false); // Close current modal
+                                                        navigation.navigate('Payment', {
+                                                            title: 'Donate to Beloved',
+                                                            description: `Donation for ${selectedEvent.title}. Thank you for your generosity!`,
+                                                            referencePrefix: 'DONATION-',
+                                                        });
+                                                    }}
+                                                >
+                                                    <LinearGradient colors={GRADIENTS.primary} style={styles.donateGradient}>
+                                                        <Text style={styles.donateText}>Donate via Mobile Money</Text>
+                                                    </LinearGradient>
+                                                </TouchableOpacity>
+
+
+                                            </View>
                                         </View>
-                                    </View>
-                                </>
-                            )}
-                        </ScrollView>
-                    </SafeAreaView>
+                                    </>
+                                )}
+                            </ScrollView>
+                        )}
+                    </View>
                 </LinearGradient>
             </Modal>
             {/* Sponsor Info Modal */}
@@ -280,7 +289,7 @@ const EventsScreen = ({ navigation }) => {
                             style={styles.closeSponsorModal}
                             onPress={() => setSelectedSponsor(null)}
                         >
-                            <CloseIcon size={20} color={COLORS.textSecondary} />
+                            <CloseIcon size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
 
                         {selectedSponsor && (
@@ -290,7 +299,7 @@ const EventsScreen = ({ navigation }) => {
                                 </View>
                                 <Text style={styles.modalSponsorName}>{selectedSponsor.name}</Text>
                                 <View style={styles.legitimacyBadge}>
-                                    <ShieldCheck size={14} color={COLORS.primary} />
+                                    <ShieldCheck size={14} color={colors.primary} />
                                     <Text style={styles.legitimacyLabel}>Verified Sponsor</Text>
                                 </View>
                                 <ScrollView style={styles.sponsorBioScroll}>
@@ -313,8 +322,8 @@ const EventsScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: SPACING.lg, paddingBottom: 100 },
     header: {
         flexDirection: 'row',
@@ -322,11 +331,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: SPACING.xl
     },
-    headerTitle: { color: COLORS.text, fontSize: 32, fontWeight: '800' },
-    headerSubtitle: { color: COLORS.textSecondary, fontSize: 16, marginTop: SPACING.xs },
-    sectionTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700', marginBottom: SPACING.md },
+    headerTitle: { color: colors.text, fontSize: 32, fontWeight: '800' },
+    headerSubtitle: { color: colors.textSecondary, fontSize: 16, marginTop: SPACING.xs },
+    sectionTitle: { color: colors.text, fontSize: 22, fontWeight: '700', marginBottom: SPACING.md },
     eventCard: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderRadius: 24,
         overflow: 'hidden',
         marginBottom: SPACING.xl,
@@ -335,13 +344,13 @@ const styles = StyleSheet.create({
     },
     eventImage: { width: '100%', height: 200 },
     eventInfo: { padding: SPACING.lg },
-    eventTitle: { color: COLORS.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.sm },
-    eventDesc: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: SPACING.lg },
+    eventTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.sm },
+    eventDesc: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: SPACING.lg },
     progressSection: { marginBottom: SPACING.lg },
     progressBar: { height: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, marginBottom: 8 },
-    progressFill: { height: '100%', backgroundColor: COLORS.secondary, borderRadius: 4 },
+    progressFill: { height: '100%', backgroundColor: colors.secondary, borderRadius: 4 },
     progressLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-    progressText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
+    progressText: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
     donateButton: { borderRadius: 16, overflow: 'hidden' },
     donateGradient: {
         flexDirection: 'row',
@@ -354,36 +363,36 @@ const styles = StyleSheet.create({
     devSection: { marginTop: SPACING.lg, marginBottom: SPACING.xl },
     devGradient: { padding: SPACING.xl, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,215,0,0.1)' },
     devHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginBottom: SPACING.md },
-    devTitle: { color: COLORS.text, fontSize: 22, fontWeight: '700' },
-    devText: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 22, marginBottom: SPACING.xl },
+    devTitle: { color: colors.text, fontSize: 22, fontWeight: '700' },
+    devText: { color: colors.textSecondary, fontSize: 14, lineHeight: 22, marginBottom: SPACING.xl },
     devButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: COLORS.accent,
+        borderColor: colors.accent,
         padding: SPACING.md,
         borderRadius: 16,
         gap: SPACING.sm
     },
-    devButtonText: { color: COLORS.accent, fontWeight: '700', fontSize: 16 },
+    devButtonText: { color: colors.accent, fontWeight: '700', fontSize: 16 },
 
     // Modal & Progress Styles
     modalContainer: { flex: 1 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, paddingTop: 60 },
-    modalHeaderTitle: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+    modalHeaderTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
     modalScroll: { paddingBottom: 40 },
     detailImage: { width: '100%', height: 250 },
     detailBody: { padding: SPACING.lg },
-    detailTitle: { color: COLORS.text, fontSize: 24, fontWeight: '800', marginBottom: 12 },
+    detailTitle: { color: colors.text, fontSize: 24, fontWeight: '800', marginBottom: 12 },
     metaRow: { flexDirection: 'row', gap: 20, marginBottom: 16 },
     metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    metaText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
-    descriptionText: { color: COLORS.textSecondary, fontSize: 15, lineHeight: 24, marginBottom: 24 },
+    metaText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },
+    descriptionText: { color: colors.textSecondary, fontSize: 15, lineHeight: 24, marginBottom: 24 },
 
     // Sponsors Styles
     sponsorsSection: { marginBottom: 32 },
-    sponsorsTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
+    sponsorsTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
     sponsorsList: { gap: 16, paddingRight: 20 },
     sponsorCard: {
         alignItems: 'center',
@@ -410,7 +419,7 @@ const styles = StyleSheet.create({
         elevation: 3
     },
     sponsorLogo: { width: '100%', height: '100%', resizeMode: 'contain' },
-    sponsorName: { color: COLORS.textSecondary, fontSize: 11, fontWeight: '700', textAlign: 'center' },
+    sponsorName: { color: colors.textSecondary, fontSize: 11, fontWeight: '700', textAlign: 'center' },
     noSponsorsCard: {
         backgroundColor: 'rgba(255,255,255,0.02)',
         borderRadius: 20,
@@ -422,25 +431,25 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.05)',
         gap: 12
     },
-    noSponsorsText: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '500', textAlign: 'center' },
+    noSponsorsText: { color: colors.textSecondary, fontSize: 13, fontWeight: '500', textAlign: 'center' },
 
     // Sponsor Modal Styles
     sponsorModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-    sponsorModalContent: { backgroundColor: COLORS.surface, width: '100%', borderRadius: 32, padding: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', position: 'relative' },
+    sponsorModalContent: { backgroundColor: colors.surface, width: '100%', borderRadius: 32, padding: 32, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', position: 'relative' },
     closeSponsorModal: { position: 'absolute', top: 20, right: 20, pdding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12 },
     sponsorDetails: { alignItems: 'center' },
     modalLogoWrapper: { width: 100, height: 100, backgroundColor: 'white', borderRadius: 24, padding: 15, justifyContent: 'center', alignItems: 'center', marginBottom: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
     modalSponsorLogo: { width: '100%', height: '100%', resizeMode: 'contain' },
-    modalSponsorName: { color: COLORS.text, fontSize: 22, fontWeight: '800', marginBottom: 8 },
+    modalSponsorName: { color: colors.text, fontSize: 22, fontWeight: '800', marginBottom: 8 },
     legitimacyBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(108, 99, 255, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 20 },
-    legitimacyLabel: { color: COLORS.primary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+    legitimacyLabel: { color: colors.primary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
     sponsorBioScroll: { maxHeight: 200, width: '100%', marginBottom: 24 },
-    modalSponsorBio: { color: COLORS.textSecondary, fontSize: 15, lineHeight: 22, textAlign: 'center' },
-    modalCloseBtn: { width: '100%', backgroundColor: COLORS.primary, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    modalSponsorBio: { color: colors.textSecondary, fontSize: 15, lineHeight: 22, textAlign: 'center' },
+    modalCloseBtn: { width: '100%', backgroundColor: colors.primary, height: 54, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
     modalCloseBtnText: { color: 'white', fontSize: 16, fontWeight: '700' },
 
     liveProgressCard: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderRadius: 20,
         padding: 20,
         marginBottom: 32,
@@ -448,29 +457,29 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.05)'
     },
     progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 12 },
-    progressMainLabel: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
-    percentageText: { color: COLORS.secondary, fontSize: 20, fontWeight: '800' },
+    progressMainLabel: { color: colors.text, fontSize: 16, fontWeight: '700' },
+    percentageText: { color: colors.secondary, fontSize: 20, fontWeight: '800' },
     fullProgressBar: { height: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 6, marginBottom: 16 },
-    fullProgressFill: { height: '100%', backgroundColor: COLORS.secondary, borderRadius: 6 },
+    fullProgressFill: { height: '100%', backgroundColor: colors.secondary, borderRadius: 6 },
     statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    statLabel: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600', marginBottom: 4 },
-    statValue: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
+    statLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: '600', marginBottom: 4 },
+    statValue: { color: colors.text, fontSize: 18, fontWeight: '800' },
 
     // Payment Styles
     paymentSection: { marginTop: 8 },
-    paymentTitle: { color: COLORS.text, fontSize: 18, fontWeight: '700', marginBottom: 16 },
+    paymentTitle: { color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 16 },
 
     // QR Display Styles
     qrDisplayContainer: { alignItems: 'center', marginBottom: 24, backgroundColor: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
-    qrPrompt: { color: COLORS.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
+    qrPrompt: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 16 },
     qrImageWrapper: { padding: 12, backgroundColor: 'white', borderRadius: 16, width: 200, height: 200, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
     qrImage: { width: '100%', height: '100%' },
     instructionsWrapper: { width: '100%', marginBottom: 16 },
-    instructionsTitle: { color: COLORS.text, fontSize: 14, fontWeight: '700', marginBottom: 4 },
-    instructionsText: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 20 },
+    instructionsTitle: { color: colors.text, fontSize: 14, fontWeight: '700', marginBottom: 4 },
+    instructionsText: { color: colors.textSecondary, fontSize: 13, lineHeight: 20 },
     directPayInfo: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 12 },
-    directPayLabel: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
-    directPayValue: { color: COLORS.primary, fontSize: 16, fontWeight: '700' },
+    directPayLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+    directPayValue: { color: colors.primary, fontSize: 16, fontWeight: '700' },
     copyButton: {
         backgroundColor: 'rgba(108, 99, 255, 0.1)',
         padding: 10,

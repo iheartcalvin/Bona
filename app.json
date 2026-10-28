@@ -1,41 +1,56 @@
 {
   "expo": {
-    "name": "Beloved",
-    "slug": "Beloved",
+    "name": "Bona",
+    "slug": "bona",
+    "scheme": "bona",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "orientation": "default",
+    "icon": "./assets/bona_logo.jpg",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "image": "./assets/bona_splash.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#0A1628",
+      "dark": {
+        "image": "./assets/bona_splash.jpg",
+        "backgroundColor": "#060E1E"
+      }
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.faithtech.beloved",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "bundleIdentifier": "com.bona.learn",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/bona_logo.jpg",
+        "backgroundColor": "#0A1628"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.faithtech.beloved",
       "googleServicesFile": "./google-services.json"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/bona_logo.jpg"
     },
     "plugins": [
       "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "eas": {
-        "projectId": "8b4cb3cb-4ab9-4aae-b1d7-782f8a821285"
+        "projectId": "8c72147d-63ee-4348-8508-283675a3a5fe"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8c72147d-63ee-4348-8508-283675a3a5fe"
     }
   }
 }
+

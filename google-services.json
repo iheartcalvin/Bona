@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "995328182020-13abm7d7qs3qlgtib296enc368vlo707.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.faithtech.beloved",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "995328182020-45mup7qhgd0ouccv0s218t019hps9ugg.apps.googleusercontent.com",
           "client_type": 3
         }

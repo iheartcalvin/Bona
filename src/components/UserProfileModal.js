@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Modal, Image, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { X, MapPin, Mail, Phone, Users, UserPlus, Shield } from 'lucide-react-native';
 import UserListModal from './UserListModal';
-import { COLORS, SPACING, GRADIENTS } from '../theme/colors';
+import { SPACING, GRADIENTS } from '../theme/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { UserService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
     const { user: currentUser } = useAuth();
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(false);
     const [relationship, setRelationship] = useState('not_following'); // 'following' | 'requested' | 'not_following'
@@ -138,18 +142,18 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
         <Modal visible={visible} animationType="slide" transparent={true}>
             <View style={styles.overlay}>
                 <View style={styles.container}>
-                    <LinearGradient colors={GRADIENTS.dark} style={styles.gradientContainer}>
+                    <LinearGradient colors={gradients.background} style={styles.gradientContainer}>
 
                         {/* Header */}
                         <View style={styles.header}>
                             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                                <X color={COLORS.text} size={24} />
+                                <X color={colors.text} size={24} />
                             </TouchableOpacity>
                         </View>
 
                         {loading ? (
                             <View style={styles.centerContent}>
-                                <ActivityIndicator size="large" color={COLORS.primary} />
+                                <ActivityIndicator size="large" color={colors.primary} />
                             </View>
                         ) : profile ? (
                             <ScrollView contentContainerStyle={styles.content}>
@@ -175,13 +179,13 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                         {/* Show Gender if Public OR if it's ME */}
                                         {((profile.settings?.genderVisible || (currentUser && currentUser.uid === uid)) && profile.gender && profile.gender !== 'Unknown') && (
                                             <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                                                <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '600' }}>{profile.gender}</Text>
+                                                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>{profile.gender}</Text>
                                             </View>
                                         )}
                                         {/* Show Age if Public OR if it's ME */}
                                         {((profile.settings?.ageVisible || (currentUser && currentUser.uid === uid)) && profile.age) && (
                                             <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                                                <Text style={{ color: COLORS.textSecondary, fontSize: 11, fontWeight: '600' }}>{profile.age} y/o</Text>
+                                                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>{profile.age} y/o</Text>
                                             </View>
                                         )}
                                     </View>
@@ -205,7 +209,7 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                         ) : (
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                 {relationship === 'following' ? (
-                                                    <Users size={20} color={COLORS.text} />
+                                                    <Users size={20} color={colors.text} />
                                                 ) : relationship === 'requested' ? (
                                                     <Mail size={20} color="white" />
                                                 ) : (
@@ -213,7 +217,7 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                                 )}
                                                 <Text style={[
                                                     styles.actionBtnText,
-                                                    relationship === 'following' && { color: COLORS.text }
+                                                    relationship === 'following' && { color: colors.text }
                                                 ]}>
                                                     {relationship === 'following' ? 'Following' : relationship === 'requested' ? 'Requested' : 'Follow'}
                                                 </Text>
@@ -268,7 +272,7 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                                 </View>
                                             ))
                                         ) : (
-                                            <Text style={{ color: COLORS.textSecondary, fontStyle: 'italic', marginLeft: 4 }}>No badges earned yet.</Text>
+                                            <Text style={{ color: colors.textSecondary, fontStyle: 'italic', marginLeft: 4 }}>No badges earned yet.</Text>
                                         )}
                                     </ScrollView>
                                 </View>
@@ -278,7 +282,7 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                     {/* Email - Show if Public OR if it is ME */}
                                     {(profile.settings?.emailVisible || (currentUser && currentUser.uid === uid)) && (
                                         <View style={styles.infoRow}>
-                                            <Mail color={COLORS.primary} size={18} />
+                                            <Mail color={colors.primary} size={18} />
                                             <Text style={styles.infoText}>{profile.email || 'Hidden'}</Text>
                                         </View>
                                     )}
@@ -286,20 +290,20 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
                                     {/* Phone - Show if Public OR if it is ME */}
                                     {(profile.settings?.phoneVisible || (currentUser && currentUser.uid === uid)) && (
                                         <View style={styles.infoRow}>
-                                            <Phone color={COLORS.primary} size={18} />
+                                            <Phone color={colors.primary} size={18} />
                                             <Text style={styles.infoText}>{profile.phoneNumber || 'Hidden'}</Text>
                                         </View>
                                     )}
 
                                     {!profile.settings?.emailVisible && !profile.settings?.phoneVisible && currentUser?.uid !== uid && (
-                                        <Text style={{ color: COLORS.textSecondary, fontStyle: 'italic', textAlign: 'center' }}>Contact info is private.</Text>
+                                        <Text style={{ color: colors.textSecondary, fontStyle: 'italic', textAlign: 'center' }}>Contact info is private.</Text>
                                     )}
                                 </View>
 
                             </ScrollView>
                         ) : (
                             <View style={styles.centerContent}>
-                                <Text style={{ color: COLORS.textSecondary }}>User not found.</Text>
+                                <Text style={{ color: colors.textSecondary }}>User not found.</Text>
                             </View>
                         )}
                     </LinearGradient>
@@ -318,7 +322,9 @@ const UserProfileModal = ({ visible, onClose, uid, onSwitchUser }) => {
     );
 };
 
-const styles = StyleSheet.create({
+
+
+const createStyles = (colors) => StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
     container: { height: '85%', borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
     gradientContainer: { flex: 1 },
@@ -328,26 +334,26 @@ const styles = StyleSheet.create({
     centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     avatarContainer: { position: 'relative', marginBottom: 16 },
-    avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: COLORS.primary },
-    moodBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: COLORS.surface, borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
+    avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: colors.primary },
+    moodBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: colors.surface, borderRadius: 15, width: 30, height: 30, justifyContent: 'center', alignItems: 'center' },
 
-    name: { color: COLORS.text, fontSize: 24, fontWeight: '800' },
-    moodLabel: { color: COLORS.accent, fontSize: 14, fontWeight: '600', marginBottom: 24 },
+    name: { color: colors.text, fontSize: 24, fontWeight: '800' },
+    moodLabel: { color: colors.accent, fontSize: 14, fontWeight: '600', marginBottom: 24 },
 
     statsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, marginBottom: 30, width: '100%', justifyContent: 'space-around' },
     statItem: { alignItems: 'center' },
     statDivider: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 20 },
-    statValue: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
-    statLabel: { color: COLORS.textSecondary, fontSize: 10, textTransform: 'uppercase', marginTop: 4 },
+    statValue: { color: colors.text, fontSize: 18, fontWeight: '800' },
+    statLabel: { color: colors.textSecondary, fontSize: 10, textTransform: 'uppercase', marginTop: 4 },
 
     actionBtn: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         paddingVertical: 12,
         paddingHorizontal: 32,
         borderRadius: 25,
         marginBottom: 32, // More space
         elevation: 4,
-        shadowColor: COLORS.primary,
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -362,8 +368,8 @@ const styles = StyleSheet.create({
         shadowOpacity: 0
     },
     requestedBtn: {
-        backgroundColor: COLORS.accent, // Orange/Yellow logic usually
-        shadowColor: COLORS.accent
+        backgroundColor: colors.accent, // Orange/Yellow logic usually
+        shadowColor: colors.accent
     },
     actionBtnText: {
         color: 'white',
@@ -375,16 +381,16 @@ const styles = StyleSheet.create({
     statsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, marginBottom: 30, width: '100%', justifyContent: 'space-around' },
     statItem: { alignItems: 'center' },
     statDivider: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 20 },
-    statValue: { color: COLORS.text, fontSize: 18, fontWeight: '800' },
-    statLabel: { color: COLORS.textSecondary, fontSize: 10, textTransform: 'uppercase', marginTop: 4 },
+    statValue: { color: colors.text, fontSize: 18, fontWeight: '800' },
+    statLabel: { color: colors.textSecondary, fontSize: 10, textTransform: 'uppercase', marginTop: 4 },
 
     infoCard: { width: '100%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 20, padding: 20, gap: 16 },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    infoText: { color: COLORS.text, fontSize: 14 },
+    infoText: { color: colors.text, fontSize: 14 },
 
     // Reward Styles
     section: { width: '100%', marginBottom: 24 },
-    sectionTitle: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
+    sectionTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
 
     pointsCard: {
         flexDirection: 'row',
@@ -417,8 +423,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     rewardTier: { fontSize: 16, fontWeight: '900', color: '#fff' },
-    rewardBook: { color: COLORS.text, fontSize: 13, fontWeight: '700' },
-    rewardPoints: { color: COLORS.success, fontSize: 10, fontWeight: '600' }
+    rewardBook: { color: colors.text, fontSize: 13, fontWeight: '700' },
+    rewardPoints: { color: colors.success, fontSize: 10, fontWeight: '600' }
 });
 
 export default UserProfileModal;

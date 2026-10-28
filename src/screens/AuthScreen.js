@@ -7,21 +7,29 @@ import {
     TouchableOpacity,
     ScrollView,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    Image
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { User, Mail, Lock, Phone, Calendar, Heart, ChevronLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
+
+import { GRADIENTS, SPACING } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 
 import { UserService } from '../services/userService';
 import { useAuth } from '../context/AuthContext';
 
 const AuthScreen = ({ navigation }) => {
+    const { colors, theme, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
+        username: '',
         phone: '',
         email: '',
         password: '',
@@ -29,13 +37,48 @@ const AuthScreen = ({ navigation }) => {
         dob: '',
         gender: null
     });
+    const [isUsernameValid, setIsUsernameValid] = useState(null); // null, true, false
+    const [checkingUsername, setCheckingUsername] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     const { signUp, signInWithGoogle } = useAuth();
 
+    // Debounce username check
+    React.useEffect(() => {
+        const checkUsername = async () => {
+            if (formData.username.length < 3) {
+                setIsUsernameValid(null);
+                return;
+            }
+            setCheckingUsername(true);
+            try {
+                const available = await UserService.checkUsernameAvailability(formData.username);
+                setIsUsernameValid(available);
+            } catch (error) {
+                console.error("Check username error", error);
+            } finally {
+                setCheckingUsername(false);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            if (formData.username) checkUsername();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.username]);
+
     const handleRegister = async () => {
-        if (!formData.email || !formData.password) {
+        if (!formData.email || !formData.password || !formData.username) {
             alert('Please fill in all fields');
+            return;
+        }
+        if (formData.username.length < 3) {
+            alert('Username must be at least 3 characters');
+            return;
+        }
+        if (isUsernameValid === false) {
+            alert('Username is already taken');
             return;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -64,12 +107,15 @@ const AuthScreen = ({ navigation }) => {
                     email: formData.email,
                     firstName: formData.firstName,
                     lastName: formData.lastName,
-                    username: `${formData.firstName}${formData.lastName}`.toLowerCase().replace(/\s/g, ''),
+                    username: formData.username.toLowerCase(),
                     phone: formData.phone,
                     dob: formData.dob,
                     age: age, // Calculated age
                     gender: formData.gender // 'male' or 'female'
                 });
+
+                alert('Verification email sent! Please check your inbox before logging in.');
+                navigation.navigate('Login');
             }
         } catch (error) {
             if (error.code === 'auth/email-already-in-use') {
@@ -88,17 +134,32 @@ const AuthScreen = ({ navigation }) => {
                 {icon}
             </View>
             <TextInput
-                style={[styles.input, isPassword && { color: COLORS.text }]}
+                style={[styles.input, isPassword && { color: colors.text }]}
                 placeholder={placeholder}
-                placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholderTextColor={colors.textSecondary}
                 value={formData[key]}
-                onChangeText={(text) => setFormData({ ...formData, [key]: text })}
+                onChangeText={(text) => {
+                    // For username, restrict characters if needed, e.g. no spaces
+                    if (key === 'username') text = text.replace(/\s/g, '').toLowerCase();
+                    setFormData({ ...formData, [key]: text })
+                }}
                 secureTextEntry={isPassword}
                 keyboardType={keyboardType}
                 autoCapitalize={autoCapitalize}
                 textContentType={textContentType}
                 autoCorrect={!isPassword}
             />
+            {key === 'username' && formData.username.length >= 3 && (
+                <View style={{ marginRight: 8 }}>
+                    {checkingUsername ? (
+                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Checking...</Text>
+                    ) : isUsernameValid ? (
+                        <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700' }}>Available</Text>
+                    ) : (
+                        <Text style={{ color: colors.error, fontSize: 12, fontWeight: '700' }}>Taken</Text>
+                    )}
+                </View>
+            )}
         </View>
     );
 
@@ -116,7 +177,7 @@ const AuthScreen = ({ navigation }) => {
     };
 
     return (
-        <LinearGradient colors={GRADIENTS.dark} style={styles.container}>
+        <LinearGradient colors={gradients.background} style={styles.container}>
             <SafeAreaView style={{ flex: 1 }}>
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -124,13 +185,18 @@ const AuthScreen = ({ navigation }) => {
                 >
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                         <View style={styles.header}>
+                            <Image
+                                source={require('../../assets/logo.png')}
+                                style={{ width: 120, height: 40, resizeMode: 'contain', marginBottom: 20 }}
+                            />
                             <Text style={styles.title}>Create a Profile</Text>
                             <Text style={styles.subtitle}>Make Session</Text>
                         </View>
 
                         <View style={styles.form}>
-                            {renderInput('First Name', <User size={20} color={COLORS.primary} />, 'firstName')}
-                            {renderInput('Last Name', <User size={20} color={COLORS.primary} />, 'lastName')}
+                            {renderInput('First Name', <User size={20} color={colors.primary} />, 'firstName')}
+                            {renderInput('Last Name', <User size={20} color={colors.primary} />, 'lastName')}
+                            {renderInput('Username', <User size={20} color={colors.primary} />, 'username', false, 'default', 'none')}
 
                             <View style={styles.phoneInputContainer}>
                                 <View style={styles.countryCode}>
@@ -138,12 +204,12 @@ const AuthScreen = ({ navigation }) => {
                                 </View>
                                 <View style={[styles.inputWrapper, { flex: 1, marginBottom: 0 }]}>
                                     <View style={styles.inputIcon}>
-                                        <Phone size={20} color={COLORS.primary} />
+                                        <Phone size={20} color={colors.primary} />
                                     </View>
                                     <TextInput
                                         style={styles.input}
                                         placeholder="07XXXXXXXXXX"
-                                        placeholderTextColor="rgba(255,255,255,0.4)"
+                                        placeholderTextColor={colors.textSecondary}
                                         value={formData.phone}
                                         onChangeText={(text) => setFormData({ ...formData, phone: text })}
                                         keyboardType="phone-pad"
@@ -151,15 +217,15 @@ const AuthScreen = ({ navigation }) => {
                                 </View>
                             </View>
 
-                            {renderInput('Email', <Mail size={20} color={COLORS.primary} />, 'email', false, 'email-address', 'none', 'emailAddress')}
-                            {renderInput('Password', <Lock size={20} color={COLORS.primary} />, 'password', true, 'default', 'none', 'newPassword')}
-                            {renderInput('Confirm Password', <Lock size={20} color={COLORS.primary} />, 'confirmPassword', true, 'default', 'none', 'newPassword')}
+                            {renderInput('Email', <Mail size={20} color={colors.primary} />, 'email', false, 'email-address', 'none', 'emailAddress')}
+                            {renderInput('Password', <Lock size={20} color={colors.primary} />, 'password', true, 'default', 'none', 'newPassword')}
+                            {renderInput('Confirm Password', <Lock size={20} color={colors.primary} />, 'confirmPassword', true, 'default', 'none', 'newPassword')}
 
                             <View style={styles.row}>
                                 <View style={styles.dobContainer}>
                                     <Text style={styles.label}>Date of birth</Text>
                                     <TouchableOpacity style={styles.dobInput} onPress={() => setShowDatePicker(true)}>
-                                        <Calendar size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
+                                        <Calendar size={18} color={colors.primary} style={{ marginRight: 8 }} />
                                         <Text style={[styles.inputSmall, !formData.dob && { color: 'rgba(255,255,255,0.4)' }]}>
                                             {formData.dob || "mm/dd/yy"}
                                         </Text>
@@ -236,17 +302,19 @@ const AuthScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
+
+
+const createStyles = (colors) => StyleSheet.create({
     container: { flex: 1 },
     scrollContent: { padding: SPACING.xl, paddingBottom: 60 },
     header: { alignItems: 'center', marginBottom: 40, marginTop: 20 },
-    title: { color: COLORS.text, fontSize: 32, fontWeight: '800', marginBottom: 8 },
-    subtitle: { color: COLORS.textSecondary, fontSize: 18, fontWeight: '500' },
+    title: { color: colors.text, fontSize: 32, fontWeight: '800', marginBottom: 8 },
+    subtitle: { color: colors.textSecondary, fontSize: 18, fontWeight: '500' },
     form: { width: '100%' },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderRadius: 16,
         marginBottom: SPACING.md,
         height: 60,
@@ -255,10 +323,10 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.05)'
     },
     inputIcon: { marginRight: SPACING.sm },
-    input: { flex: 1, color: COLORS.text, fontSize: 16 },
+    input: { flex: 1, color: colors.text, fontSize: 16 },
     phoneInputContainer: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
     countryCode: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         width: 60,
         height: 60,
         borderRadius: 16,
@@ -267,21 +335,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)'
     },
-    countryCodeText: { color: COLORS.textSecondary, fontWeight: '700', fontSize: 16 },
+    countryCodeText: { color: colors.textSecondary, fontWeight: '700', fontSize: 16 },
     row: { flexDirection: 'row', gap: 20, marginBottom: 30 },
-    label: { color: COLORS.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 12 },
+    label: { color: colors.textSecondary, fontSize: 14, fontWeight: '600', marginBottom: 12 },
     dobContainer: { flex: 1 },
     dobInput: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         height: 50,
         borderRadius: 12,
         paddingHorizontal: 12,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)'
     },
-    inputSmall: { flex: 1, color: COLORS.text, fontSize: 14 },
+    inputSmall: { flex: 1, color: colors.text, fontSize: 14 },
     genderContainer: { flex: 1 },
     genderOptions: { gap: 12 },
     checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -290,17 +358,17 @@ const styles = StyleSheet.create({
         height: 20,
         borderRadius: 6,
         borderWidth: 2,
-        borderColor: COLORS.primary
+        borderColor: colors.primary
     },
-    checkboxActive: { backgroundColor: COLORS.primary },
-    checkboxLabel: { color: COLORS.text, fontSize: 16, fontWeight: '500' },
-    registerBtn: { marginTop: 10, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+    checkboxActive: { backgroundColor: colors.primary },
+    checkboxLabel: { color: colors.text, fontSize: 16, fontWeight: '500' },
+    registerBtn: { marginTop: 10, borderRadius: 16, overflow: 'hidden', elevation: 8, shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
     registerBtnGradient: { height: 60, justifyContent: 'center', alignItems: 'center' },
     registerBtnText: { color: 'white', fontSize: 20, fontWeight: '800', letterSpacing: 1 },
 
     dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
     dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
-    dividerText: { color: COLORS.textSecondary, marginHorizontal: 16, fontSize: 14, fontWeight: '600' },
+    dividerText: { color: colors.textSecondary, marginHorizontal: 16, fontSize: 14, fontWeight: '600' },
 
     googleBtn: {
         flexDirection: 'row',
@@ -321,8 +389,8 @@ const styles = StyleSheet.create({
     googleBtnText: { color: '#000', fontSize: 16, fontWeight: '700' },
 
     loginLink: { marginTop: 24, alignItems: 'center' },
-    loginText: { color: COLORS.textSecondary, fontSize: 15 },
-    loginTextBold: { color: COLORS.primary, fontWeight: '700' }
+    loginText: { color: colors.textSecondary, fontSize: 15 },
+    loginTextBold: { color: colors.primary, fontWeight: '700' }
 });
 
 export default AuthScreen;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import UserProfileModal from '../UserProfileModal';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Alert, ActivityIndicator, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,31 +7,48 @@ import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync, AudioMo
 import { SpaceService } from '../../services/SpaceService';
 import { UserService } from '../../services/userService';
 import AgoraService from '../../services/AgoraService';
-import { COLORS, SPACING, GRADIENTS } from '../../theme/colors';
+import { SPACING } from '../../theme/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { BibleService } from '../../services/bibleService';
 import SpeechService from '../../services/SpeechService';
+import { useTheme } from '../../context/ThemeContext';
+import { BlurView } from 'expo-blur';
 
 // Animated Speaking Indicator Component
-const SpeakingIndicator = () => {
+const SpeakingIndicator = ({ styles, gradients }) => {
     const scaleAnim = React.useRef(new Animated.Value(1)).current;
+    const opacityAnim = React.useRef(new Animated.Value(0.3)).current; // Lower initial opacity
 
     React.useEffect(() => {
         const pulse = Animated.loop(
-            Animated.sequence([
-                Animated.timing(scaleAnim, {
-                    toValue: 1.2,
-                    duration: 500,
-                    useNativeDriver: true,
-                    easing: Easing.ease
-                }),
-                Animated.timing(scaleAnim, {
-                    toValue: 1,
-                    duration: 500,
-                    useNativeDriver: true,
-                    easing: Easing.ease
-                })
+            Animated.parallel([
+                Animated.sequence([
+                    Animated.timing(scaleAnim, {
+                        toValue: 1.3,
+                        duration: 800,
+                        useNativeDriver: true,
+                        easing: Easing.out(Easing.ease)
+                    }),
+                    Animated.timing(scaleAnim, {
+                        toValue: 1,
+                        duration: 800,
+                        useNativeDriver: true,
+                        easing: Easing.in(Easing.ease)
+                    })
+                ]),
+                Animated.sequence([
+                    Animated.timing(opacityAnim, {
+                        toValue: 0.1, // Fade out as it expands
+                        duration: 800,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(opacityAnim, {
+                        toValue: 0.3, // Fade back in
+                        duration: 800,
+                        useNativeDriver: true,
+                    })
+                ])
             ])
         );
         pulse.start();
@@ -39,14 +56,14 @@ const SpeakingIndicator = () => {
     }, []);
 
     return (
-        <Animated.View style={[styles.speakingIndicator, { transform: [{ scale: scaleAnim }] }]}>
-            <LinearGradient colors={GRADIENTS.primary} style={StyleSheet.absoluteFill} />
+        <Animated.View style={[styles.speakingIndicator, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#4A90E2', borderRadius: 36 }]} />
         </Animated.View>
     );
 };
 
 // Animated Hand Raise Indicator
-const HandRaiseIndicator = () => {
+const HandRaiseIndicator = ({ styles }) => {
     const rotateAnim = React.useRef(new Animated.Value(0)).current;
 
     React.useEffect(() => {
@@ -91,7 +108,7 @@ const HandRaiseIndicator = () => {
 };
 
 // Floating Heart Animation
-const FloatingHeart = ({ id, onComplete, style }) => {
+const FloatingHeart = ({ id, onComplete, style, color }) => {
     const anim = React.useRef(new Animated.Value(0)).current;
 
     React.useEffect(() => {
@@ -128,12 +145,15 @@ const FloatingHeart = ({ id, onComplete, style }) => {
             opacity,
             transform: [{ translateY }, { translateX }, { scale }]
         }]}>
-            <Heart size={32} color={COLORS.secondary} fill={COLORS.secondary} />
+            <Heart size={32} color={color} fill={color} />
         </Animated.View>
     );
 };
 
 const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda, topic, hostId }) => {
+    const { colors, gradients, activeMode } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     const navigation = useNavigation();
     const [showDetails, setShowDetails] = React.useState(false);
     const [participants, setParticipants] = React.useState([]);
@@ -401,9 +421,16 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
 
     const handleMicPress = async () => {
         if (isRealHost && myRole === 'listener') {
-            // Host wanting to speak from audience -> Promote & Unmute
+            // Check permissions first
+            if (permissionResponse?.status !== 'granted') {
+                const { status } = await requestPermission();
+                if (status !== 'granted') {
+                    Alert.alert("Permission Required", "Microphone access is needed to speak.");
+                    return;
+                }
+            }
+            // Host wanting to speak from audience -> Promote back to speaker
             await SpaceService.promoteToSpeaker(channelId, user.uid);
-            await SpaceService.toggleMute(channelId, user.uid, false);
             return;
         }
 
@@ -430,13 +457,10 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
     };
 
     const handleParticipantPress = (participant) => {
-        // If clicking self, do nothing
-        if (participant.uid === user.uid) return;
-
-        // If Host clicking others -> Show Action Sheet (Profile + Manage)
+        // If Host clicking anyone (including self) -> Show Action Sheet
         if (isRealHost) {
             Alert.alert(
-                `Manage ${participant.name}`,
+                `Manage ${participant.uid === user.uid ? "Yourself" : participant.name}`,
                 "Choose an action:",
                 [
                     { text: "View Profile", onPress: () => setSelectedParticipant(participant.uid) },
@@ -447,6 +471,9 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                 ]
             );
         } else {
+            // If clicking self, do nothing
+            if (participant.uid === user.uid) return;
+
             // If regular user clicking others -> Show Profile directly
             setSelectedParticipant(participant.uid);
         }
@@ -550,7 +577,12 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                     style: "destructive",
                     onPress: async () => {
                         if (isRealHost) {
-                            await SpaceService.endSpace(channelId);
+                            try {
+                                await SpaceService.endSpace(channelId);
+                            } catch (e) {
+                                Alert.alert("Error", "Failed to close the space cleanly on the server.");
+                                console.error(e);
+                            }
                         }
                         onLeave();
                     }
@@ -568,8 +600,8 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
     ];
 
     return (
-        <LinearGradient colors={['#1a1a2e', '#16213e']} style={styles.container}>
-            <LinearGradient colors={GRADIENTS.primary} style={styles.header}>
+        <LinearGradient colors={gradients.background} style={styles.container}>
+            <LinearGradient colors={gradients.primary} style={styles.header}>
                 <SafeAreaView edges={['top']} style={{ paddingBottom: 16 }}>
                     <View style={styles.headerTop}>
                         <TouchableOpacity style={styles.iconButton} onPress={handleLeave}>
@@ -616,7 +648,12 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                 </SafeAreaView>
             </LinearGradient >
 
-            <ScrollView style={styles.content}>
+            <ScrollView
+                ref={scrollRef}
+                style={styles.content}
+                onScroll={e => setScrollOffset(e.nativeEvent.contentOffset.y)}
+                scrollEventThrottle={16}
+            >
                 <View style={styles.verseFocus}>
                     <Text style={styles.verseRef}>{topic || "Scripture Focus"}</Text>
                     <Text style={styles.verseText}>{description || "Join the discussion..."}</Text>
@@ -631,18 +668,19 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                             style={styles.participantItem}
                             onPress={() => handleParticipantPress(p)}
                             ref={el => avatarRefs.current[p.uid] = el}
+                            onLayout={(e) => onParticipantLayout(p.uid, e)}
                             collapsable={false} // Important for measure() on Android
                         >
                             <View style={styles.avatarWrapper}>
                                 <Image source={p.avatar ? { uri: p.avatar } : { uri: 'https://via.placeholder.com/150' }} style={styles.avatar} />
                                 {!p.isMuted && (
-                                    <SpeakingIndicator />
+                                    <SpeakingIndicator styles={styles} gradients={gradients} />
                                 )}
                                 {p.isMuted && <View style={styles.mutedBadge}><MicOff size={12} color="white" /></View>}
                             </View>
                             <Text style={styles.participantName}>{p.name}</Text>
                             <Text style={styles.participantRole}>
-                                {p.role === 'host' ? 'Host' : 'Speaker'}
+                                {p.uid === hostId ? 'Host' : (p.role === 'host' ? 'Host' : 'Speaker')}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -658,16 +696,17 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                                     style={styles.participantItem}
                                     onPress={() => handleParticipantPress(p)}
                                     ref={el => avatarRefs.current[p.uid] = el}
+                                    onLayout={(e) => onParticipantLayout(p.uid, e)}
                                     collapsable={false}
                                 >
                                     <View style={styles.avatarWrapper}>
                                         <Image source={p.avatar ? { uri: p.avatar } : { uri: 'https://via.placeholder.com/150' }} style={styles.avatar} />
                                         {p.isHandRaised && (
-                                            <HandRaiseIndicator />
+                                            <HandRaiseIndicator styles={styles} />
                                         )}
                                     </View>
                                     <Text style={styles.participantName}>{p.name}</Text>
-                                    <Text style={styles.participantRole}>Listener</Text>
+                                    <Text style={styles.participantRole}>{p.uid === hostId ? 'Host' : 'Listener'}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -682,6 +721,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                         key={heart.id}
                         id={heart.id}
                         onComplete={removeHeart}
+                        color={colors.secondary}
                         style={{
                             position: 'absolute',
                             left: heart.x || 0,
@@ -702,16 +742,16 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                 onSwitchUser={setSelectedParticipant}
             />
 
-            <BlurView intensity={20} tint="dark" style={styles.footer}>
+            <BlurView intensity={20} tint={activeMode === 'dark' ? 'dark' : 'light'} style={styles.footer}>
                 <View style={styles.footerActions}>
                     <TouchableOpacity
                         style={[styles.footerIcon, (myRole !== 'listener' && !isMuted) && styles.micActive]}
                         onPress={handleMicPress}
                     >
                         {myRole === 'listener' && !isRealHost ? (
-                            isHandRaised ? <Hand color={COLORS.primary} size={28} /> : <Mic color={COLORS.text} size={28} />
+                            isHandRaised ? <Hand color={colors.primary} size={28} /> : <Mic color={colors.text} size={28} />
                         ) : (
-                            isMuted ? <MicOff color={COLORS.textSecondary} size={28} /> : <Mic color="white" size={28} />
+                            isMuted ? <MicOff color={colors.textSecondary} size={28} /> : <Mic color="white" size={28} />
                         )}
                         <Text style={[styles.footerIconText, (myRole !== 'listener' && !isMuted) && { color: 'white' }]}>
                             {myRole === 'listener' && !isRealHost ? (isHandRaised ? 'Requested' : 'Request') : (isMuted ? 'Start Talking' : 'Mute')}
@@ -723,20 +763,40 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                     {isRealHost && myRole !== 'listener' ? (
                         <TouchableOpacity
                             style={styles.footerIcon}
-                            onPress={async () => {
-                                await SpaceService.toggleMute(channelId, user.uid, true);
-                                await SpaceService.demoteToListener(channelId, user.uid);
+                            onPress={() => {
+                                Alert.alert(
+                                    "Finish Speaking?",
+                                    "Do you want to end the space for everyone or just move to the audience?",
+                                    [
+                                        { text: "Cancel", style: "cancel" },
+                                        {
+                                            text: "Move to Audience",
+                                            onPress: async () => {
+                                                await SpaceService.toggleMute(channelId, user.uid, true);
+                                                await SpaceService.demoteToListener(channelId, user.uid);
+                                            }
+                                        },
+                                        {
+                                            text: "End for Everyone",
+                                            style: "destructive",
+                                            onPress: async () => {
+                                                await SpaceService.endSpace(channelId);
+                                                onLeave();
+                                            }
+                                        }
+                                    ]
+                                );
                             }}
                         >
-                            <LogOut color={COLORS.secondary} size={28} style={{ transform: [{ rotate: '90deg' }] }} />
-                            <Text style={styles.footerIconText}>Finished</Text>
+                            <LogOut color={colors.secondary} size={28} style={{ transform: [{ rotate: '90deg' }] }} />
+                            <Text style={styles.footerIconText}>End/Audience</Text>
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity
                             style={styles.footerIcon}
                             onPress={addHeart}
                         >
-                            <Heart color={COLORS.secondary} size={28} />
+                            <Heart color={colors.secondary} size={28} />
                             <Text style={styles.footerIconText}>React</Text>
                         </TouchableOpacity>
                     )}
@@ -744,11 +804,11 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
             </BlurView>
 
             <Modal visible={showDetails} animationType="slide" transparent={false}>
-                <LinearGradient colors={GRADIENTS.dark} style={styles.detailsModal}>
+                <LinearGradient colors={gradients.background} style={styles.detailsModal}>
                     <SafeAreaView style={{ flex: 1 }}>
                         <View style={styles.modalHeader}>
                             <TouchableOpacity onPress={() => setShowDetails(false)}>
-                                <X color={COLORS.text} size={28} />
+                                <X color={colors.text} size={28} />
                             </TouchableOpacity>
                             <Text style={styles.modalTitle}>Group Details</Text>
                             <View style={{ width: 28 }} />
@@ -757,7 +817,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                         <ScrollView contentContainerStyle={styles.modalContent}>
                             <View style={styles.detailSection}>
                                 <View style={styles.sectionHead}>
-                                    <Info size={20} color={COLORS.accent} />
+                                    <Info size={20} color={colors.accent} />
                                     <Text style={styles.sectionLabel}>Description</Text>
                                 </View>
                                 <Text style={styles.descriptionText}>{groupDescription}</Text>
@@ -765,7 +825,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
 
                             <View style={styles.detailSection}>
                                 <View style={styles.sectionHead}>
-                                    <Calendar size={20} color={COLORS.accent} />
+                                    <Calendar size={20} color={colors.accent} />
                                     <Text style={styles.sectionLabel}>Today's Agenda</Text>
                                 </View>
                                 {groupAgenda.map((item, idx) => (
@@ -778,7 +838,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
 
                             <View style={styles.detailSection}>
                                 <View style={styles.sectionHead}>
-                                    <Users size={20} color={COLORS.accent} />
+                                    <Users size={20} color={colors.accent} />
                                     <Text style={styles.sectionLabel}>Members ({participants.length})</Text>
                                 </View>
                                 {participants.map((member) => (
@@ -803,7 +863,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                                                     });
                                                 }}
                                             >
-                                                <UserPlus size={18} color={COLORS.primary} />
+                                                <UserPlus size={18} color={colors.primary} />
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -811,7 +871,7 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
                             </View>
 
                             <TouchableOpacity style={styles.modalLeaveBtn} onPress={handleLeave}>
-                                <LogOut size={20} color={COLORS.secondary} style={{ marginRight: 8 }} />
+                                <LogOut size={20} color={colors.secondary} style={{ marginRight: 8 }} />
                                 <Text style={styles.modalLeaveText}>Leave Fellowship</Text>
                             </TouchableOpacity>
                         </ScrollView>
@@ -822,8 +882,8 @@ const SpaceStudy = ({ channelId, user, onLeave, channelName, description, agenda
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     header: {
         paddingHorizontal: SPACING.xl,
         paddingBottom: SPACING.lg,
@@ -837,14 +897,14 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: colors.inputBg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)'
+        borderColor: colors.cardBorder
     },
     leaveText: { color: 'white', fontWeight: '700', fontSize: 14 },
-    title: { color: 'white', fontSize: 18, fontWeight: '800' },
+    title: { color: 'white', fontSize: 18, fontWeight: '800', marginBottom: 4 },
     hostBadge: {
         backgroundColor: 'rgba(255,255,255,0.2)',
         paddingHorizontal: 8,
@@ -865,10 +925,12 @@ const styles = StyleSheet.create({
     sessionTimer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 12
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginTop: 16,
+        alignSelf: 'center'
     },
     timerText: {
         color: 'white',
@@ -879,16 +941,16 @@ const styles = StyleSheet.create({
     },
     content: { flex: 1, padding: SPACING.lg },
     verseFocus: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         padding: SPACING.xl,
         borderRadius: 24,
         marginBottom: SPACING.xl,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)'
+        borderColor: colors.cardBorder
     },
-    verseRef: { color: COLORS.accent, fontSize: 16, fontWeight: '700', marginBottom: SPACING.sm },
-    verseText: { color: COLORS.text, fontSize: 18, fontStyle: 'italic', lineHeight: 26 },
-    sectionTitle: { color: COLORS.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.lg },
+    verseRef: { color: colors.accent, fontSize: 16, fontWeight: '700', marginBottom: SPACING.sm },
+    verseText: { color: colors.text, fontSize: 18, fontStyle: 'italic', lineHeight: 26 },
+    sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.lg },
     participantsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xl, justifyContent: 'center' },
     participantItem: { alignItems: 'center', width: 80 },
     avatarWrapper: { position: 'relative', marginBottom: 8 },
@@ -901,7 +963,8 @@ const styles = StyleSheet.create({
         bottom: -4,
         borderRadius: 36,
         zIndex: -1,
-        opacity: 0.8
+        overflow: 'hidden', // Ensure it stays circular
+        backgroundColor: 'transparent' // Driven by inner view
     },
     mutedBadge: {
         position: 'absolute',
@@ -915,39 +978,39 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         right: 0,
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         borderRadius: 12,
         padding: 4
     },
     micActive: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: colors.primary,
         padding: 12,
         borderRadius: 50,
         marginBottom: 10
     },
-    participantName: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
-    participantRole: { color: COLORS.textSecondary, fontSize: 10 },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 40, paddingTop: 20, backgroundColor: 'rgba(15, 23, 42, 0.8)' },
+    participantName: { color: colors.text, fontSize: 12, fontWeight: '700' },
+    participantRole: { color: colors.textSecondary, fontSize: 10 },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingBottom: 40, paddingTop: 20, backgroundColor: 'transparent' },
     footerActions: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
     footerIcon: { alignItems: 'center', gap: 4 },
-    footerIconText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600' },
+    footerIconText: { color: colors.textSecondary, fontSize: 10, fontWeight: '600' },
 
     // Details Modal Styles
     detailsModal: { flex: 1 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING.lg, marginTop: 60 },
-    modalTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
+    modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
     modalContent: { padding: SPACING.lg, paddingBottom: 60 },
     detailSection: { marginBottom: 32 },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-    sectionLabel: { color: COLORS.accent, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-    descriptionText: { color: COLORS.text, fontSize: 16, lineHeight: 24, opacity: 0.8 },
+    sectionLabel: { color: colors.accent, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+    descriptionText: { color: colors.text, fontSize: 16, lineHeight: 24, opacity: 0.8 },
     agendaItem: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-    agendaDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
-    agendaText: { color: COLORS.text, fontSize: 16 },
-    memberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 12, borderRadius: 12, marginBottom: 8 },
+    agendaDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
+    agendaText: { color: colors.text, fontSize: 16 },
+    memberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, padding: 12, borderRadius: 12, marginBottom: 8 },
     memberLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     memberAvatarSmall: { width: 40, height: 40, borderRadius: 20 },
-    memberNick: { color: COLORS.text, fontSize: 15, fontWeight: '600' },
+    memberNick: { color: colors.text, fontSize: 15, fontWeight: '600' },
     addFriendBtn: { padding: 8, backgroundColor: 'rgba(108, 99, 255, 0.1)', borderRadius: 8 },
     modalLeaveBtn: {
         flexDirection: 'row',
@@ -960,10 +1023,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 71, 87, 0.2)'
     },
-    modalLeaveText: { color: COLORS.secondary, fontSize: 16, fontWeight: '700' }
+    modalLeaveText: { color: colors.secondary, fontSize: 16, fontWeight: '700' }
 });
-
-// Mock BlurView for simplicity if expo-blur isn't installed
-const BlurView = ({ children, style }) => <View style={style}>{children}</View>;
 
 export default SpaceStudy;

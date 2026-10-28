@@ -1,0 +1,12 @@
+module GTMAppAuth {
+  umbrella header "GTMAppAuth-umbrella.h"
+
+  export *
+  module * { export * }
+}
+
+
+module GTMAppAuth.Swift {
+  header "/Users/nexlume/Desktop/Beloved/build/Payload/Swift Compatibility Header/GTMAppAuth-Swift.h"
+  requires objc
+}

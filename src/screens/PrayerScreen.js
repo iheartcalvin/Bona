@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Sparkles, Bell, Plus, ChevronRight, X, Play, Pause, CheckCircle2, Mic2, Heart, Share2, Clock } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { captureRef } from 'react-native-view-shot';
 import { shareAsync } from 'expo-sharing';
-import { COLORS, GRADIENTS, SPACING } from '../theme/colors';
+
+import { GRADIENTS, SPACING } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import { useMemo } from 'react';
 import { AIService } from '../services/aiService';
 
 
@@ -17,6 +20,8 @@ import AddPrayerModal from '../components/AddPrayerModal';
 import NotificationBell from '../components/NotificationBell';
 
 const PrayerScreen = ({ navigation }) => {
+    const { colors, gradients } = useTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
     const [prayerSchedule, setPrayerSchedule] = useState([]);
@@ -231,7 +236,7 @@ const PrayerScreen = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>My Prayers</Text>
-                    <NotificationBell color={COLORS.textSecondary} />
+                    <NotificationBell color={colors.textSecondary} />
                 </View>
 
                 <TouchableOpacity
@@ -240,16 +245,16 @@ const PrayerScreen = ({ navigation }) => {
                     disabled={loading}
                 >
                     <LinearGradient
-                        colors={GRADIENTS.primary}
+                        colors={gradients.primary}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.aiGradient}
                     >
                         {loading ? (
-                            <ActivityIndicator color={COLORS.text} />
+                            <ActivityIndicator color={colors.text} />
                         ) : (
                             <>
-                                <Sparkles color={COLORS.text} size={24} />
+                                <Sparkles color="white" size={24} />
                                 <Text style={styles.aiButtonText}>Generate AI Prayer</Text>
                             </>
                         )}
@@ -290,11 +295,11 @@ const PrayerScreen = ({ navigation }) => {
                     <TouchableOpacity style={[styles.upcomingCard, { justifyContent: 'center', alignItems: 'center' }]} onPress={() => setShowAddModal(true)}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' }}>
-                                <Plus color={COLORS.text} size={24} />
+                                <Plus color={colors.text} size={24} />
                             </View>
                             <View>
-                                <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '700' }}>Add Scheduled Prayer</Text>
-                                <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>Stay consistent with your spiritual goals</Text>
+                                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>Add Scheduled Prayer</Text>
+                                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Stay consistent with your spiritual goals</Text>
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -305,7 +310,7 @@ const PrayerScreen = ({ navigation }) => {
                     prayerHistory.map((item, idx) => (
                         <TouchableOpacity key={idx} style={styles.prayerItem} onPress={() => setSelectedPrayer(item)}>
                             <View style={styles.prayerLeft}>
-                                <View style={[styles.categoryIndicator, { backgroundColor: item.category === 'Gratitude' ? COLORS.accent : item.category === 'Strength' ? COLORS.secondary : COLORS.success }]} />
+                                <View style={[styles.categoryIndicator, { backgroundColor: item.category === 'Gratitude' ? colors.accent : item.category === 'Strength' ? colors.secondary : colors.success }]} />
                                 <View style={{ flex: 1, paddingRight: 10 }}>
                                     <Text style={styles.prayerTitle}>{item.title}</Text>
                                     {item.text && (
@@ -319,21 +324,21 @@ const PrayerScreen = ({ navigation }) => {
                                     </Text>
                                 </View>
                             </View>
-                            <ChevronRight color={COLORS.textSecondary} size={20} />
+                            <ChevronRight color={colors.textSecondary} size={20} />
                         </TouchableOpacity>
                     ))
                 ) : (
-                    <Text style={{ color: COLORS.textSecondary, marginBottom: 20 }}>No recent prayers yet.</Text>
+                    <Text style={{ color: colors.textSecondary, marginBottom: 20 }}>No recent prayers yet.</Text>
                 )}
                 <Text style={styles.expirationWarning}>Recent prayers are automatically cleared after 7 days.</Text>
 
                 <View style={styles.wordOfDayCard}>
                     {loadingWod ? (
-                        <ActivityIndicator color={COLORS.accent} style={{ marginVertical: 20 }} />
+                        <ActivityIndicator color={colors.accent} style={{ marginVertical: 20 }} />
                     ) : (
                         <>
                             <TouchableOpacity style={styles.shareWordBtn} onPress={() => setShowShareModal(true)}>
-                                <Share2 color={COLORS.accent} size={20} />
+                                <Share2 color={colors.accent} size={20} />
                             </TouchableOpacity>
                             <Text style={styles.wordOfDayLabel}>Word of the Day</Text>
                             <Text style={styles.wordOfDayText}>"{WOD_TEXT}"</Text>
@@ -345,13 +350,13 @@ const PrayerScreen = ({ navigation }) => {
 
             {/* Share Card Modal - Matches BibleScreen Design */}
             <Modal visible={showShareModal} animationType="fade" presentationStyle="fullScreen">
-                <LinearGradient colors={GRADIENTS.dark} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <LinearGradient colors={gradients.dark} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                     <SafeAreaView style={{ width: '100%', height: '100%', alignItems: 'center' }}>
                         <View style={{ width: '100%', padding: 20, paddingTop: 60, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <TouchableOpacity onPress={() => setShowShareModal(false)}>
-                                <X color={COLORS.text} size={28} />
+                                <X color="white" size={28} />
                             </TouchableOpacity>
-                            <Text style={{ color: COLORS.text, fontSize: 18, fontWeight: '700' }}>Share Word</Text>
+                            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>Share Word</Text>
                             <View style={{ width: 28 }} />
                         </View>
 
@@ -362,7 +367,7 @@ const PrayerScreen = ({ navigation }) => {
                                 style={{ margin: 20, shadowColor: "#000", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 }}
                             >
                                 <LinearGradient
-                                    colors={GRADIENTS.primary}
+                                    colors={gradients.primary}
                                     style={{
                                         padding: 40,
                                         borderRadius: 20,
@@ -388,8 +393,10 @@ const PrayerScreen = ({ navigation }) => {
                                     </View>
 
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 'auto', opacity: 0.9 }}>
-                                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: 'white', marginRight: 10 }} />
-                                        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Beloved App</Text>
+                                        <Image
+                                            source={require('../../assets/logo.png')}
+                                            style={{ width: 80, height: 30, opacity: 0.7, resizeMode: 'contain', tintColor: 'white' }}
+                                        />
                                     </View>
                                 </LinearGradient>
                             </View>
@@ -397,7 +404,7 @@ const PrayerScreen = ({ navigation }) => {
 
                         <View style={{ padding: 30, width: '100%' }}>
                             <TouchableOpacity
-                                style={{ backgroundColor: COLORS.primary, padding: 20, borderRadius: 30, alignItems: 'center', marginBottom: 20 }}
+                                style={{ backgroundColor: colors.primary, padding: 20, borderRadius: 30, alignItems: 'center', marginBottom: 20 }}
                                 onPress={handleShareWord}
                             >
                                 <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18 }}>Share Image</Text>
@@ -414,14 +421,14 @@ const PrayerScreen = ({ navigation }) => {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{generatedPrayer?.category} Prayer</Text>
                             <TouchableOpacity onPress={() => setGeneratedPrayer(null)}>
-                                <X color={COLORS.textSecondary} size={24} />
+                                <X color={colors.textSecondary} size={24} />
                             </TouchableOpacity>
                         </View>
                         <ScrollView style={{ maxHeight: 400, marginBottom: SPACING.lg }}>
                             <Text style={styles.generatedText}>{generatedPrayer?.text}</Text>
                         </ScrollView>
                         <TouchableOpacity style={styles.saveButton} onPress={handleSaveGeneratedPrayer}>
-                            {loading ? <ActivityIndicator color={COLORS.text} /> : <Text style={styles.saveButtonText}>Save to My Prayers</Text>}
+                            {loading ? <ActivityIndicator color={colors.text} /> : <Text style={styles.saveButtonText}>Save to My Prayers</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -434,19 +441,19 @@ const PrayerScreen = ({ navigation }) => {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{selectedPrayer?.title || 'Prayer Details'}</Text>
                             <TouchableOpacity onPress={() => setSelectedPrayer(null)}>
-                                <X color={COLORS.textSecondary} size={24} />
+                                <X color={colors.textSecondary} size={24} />
                             </TouchableOpacity>
                         </View>
                         <ScrollView style={{ maxHeight: 400, marginBottom: SPACING.lg }}>
                             <Text style={styles.generatedText}>{selectedPrayer?.text || selectedPrayer?.content || 'No content available.'}</Text>
                         </ScrollView>
-                        <TouchableOpacity style={[styles.saveButton, { backgroundColor: COLORS.secondary, marginBottom: 10 }]} onPress={() => {
+                        <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.secondary, marginBottom: 10 }]} onPress={() => {
                             const p = selectedPrayer;
                             setSelectedPrayer(null);
                             setTimeout(() => handleOpenSchedule(p), 100);
                         }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                                <Clock size={20} color={COLORS.text} />
+                                <Clock size={20} color={colors.text} />
                                 <Text style={styles.saveButtonText}>Schedule this Prayer</Text>
                             </View>
                         </TouchableOpacity>
@@ -459,7 +466,7 @@ const PrayerScreen = ({ navigation }) => {
 
             {/* Active Prayer Session Modal */}
             <Modal visible={showSessionModal} transparent={false} animationType="slide">
-                <LinearGradient colors={GRADIENTS.dark} style={styles.sessionModal}>
+                <LinearGradient colors={gradients.dark} style={styles.sessionModal}>
                     <SafeAreaView style={{ flex: 1 }}>
                         <View style={styles.sessionHeader}>
                             <TouchableOpacity onPress={() => {
@@ -467,7 +474,7 @@ const PrayerScreen = ({ navigation }) => {
                                 setSessionActive(false);
                                 setAiVoiceActive(false);
                             }}>
-                                <X color={COLORS.text} size={28} />
+                                <X color={colors.text} size={28} />
                             </TouchableOpacity>
                             <Text style={styles.sessionTitle}>Live Prayer</Text>
                             <View style={{ width: 28 }} />
@@ -475,7 +482,7 @@ const PrayerScreen = ({ navigation }) => {
 
                         <ScrollView contentContainerStyle={styles.sessionContent}>
                             <View style={styles.sessionSubjectBadge}>
-                                <Heart size={16} color={COLORS.secondary} style={{ marginRight: 6 }} />
+                                <Heart size={16} color={colors.secondary} style={{ marginRight: 6 }} />
                                 <Text style={styles.sessionSubjectText}>Well-being & Wholeness</Text>
                             </View>
 
@@ -486,7 +493,7 @@ const PrayerScreen = ({ navigation }) => {
                                     style={[styles.aiVoiceBtn, aiVoiceActive && styles.aiVoiceBtnActive]}
                                     onPress={() => setAiVoiceActive(!aiVoiceActive)}
                                 >
-                                    {aiVoiceActive ? <Pause size={24} color={COLORS.text} /> : <Play size={24} color={COLORS.text} />}
+                                    {aiVoiceActive ? <Pause size={24} color={colors.text} /> : <Play size={24} color={colors.text} />}
                                     <View style={{ marginLeft: 12 }}>
                                         <Text style={styles.aiVoiceTitle}>AI Voice Follow-through</Text>
                                         <Text style={styles.aiVoiceStatus}>{aiVoiceActive ? 'Playing Voice Guide...' : 'Tap to start audio guide'}</Text>
@@ -495,15 +502,15 @@ const PrayerScreen = ({ navigation }) => {
 
                                 {!sessionActive ? (
                                     <TouchableOpacity style={styles.startPrayingBtn} onPress={() => setSessionActive(true)}>
-                                        <LinearGradient colors={GRADIENTS.primary} style={styles.startPrayingGradient}>
-                                            <Mic2 size={24} color={COLORS.text} style={{ marginRight: 10 }} />
+                                        <LinearGradient colors={gradients.primary} style={styles.startPrayingGradient}>
+                                            <Mic2 size={24} color="white" style={{ marginRight: 10 }} />
                                             <Text style={styles.startPrayingText}>Start Personal Prayer</Text>
                                         </LinearGradient>
                                     </TouchableOpacity>
                                 ) : (
                                     <View style={styles.activeSessionContainer}>
                                         <LinearGradient colors={['rgba(108, 99, 255, 0.1)', 'rgba(79, 70, 229, 0.1)']} style={styles.prayingActiveIndicator}>
-                                            <ActivityIndicator color={COLORS.primary} size="large" />
+                                            <ActivityIndicator color={colors.primary} size="large" />
                                             <Text style={styles.prayingActiveText}>You are currently praying...</Text>
                                             <Text style={styles.prayingActiveSub}>Take your time, God is listening.</Text>
                                         </LinearGradient>
@@ -512,8 +519,8 @@ const PrayerScreen = ({ navigation }) => {
                                             style={styles.doneBtn}
                                             onPress={handleCompleteSession}
                                         >
-                                            <LinearGradient colors={GRADIENTS.primary} style={styles.doneGradient}>
-                                                <CheckCircle2 size={24} color={COLORS.text} style={{ marginRight: 10 }} />
+                                            <LinearGradient colors={gradients.primary} style={styles.doneGradient}>
+                                                <CheckCircle2 size={24} color="white" style={{ marginRight: 10 }} />
                                                 <Text style={styles.doneText}>Finish & Return</Text>
                                             </LinearGradient>
                                         </TouchableOpacity>
@@ -526,8 +533,8 @@ const PrayerScreen = ({ navigation }) => {
             </Modal>
 
             <TouchableOpacity style={styles.fab} onPress={() => setShowAddModal(true)}>
-                <LinearGradient colors={GRADIENTS.warmth} style={styles.fabGradient}>
-                    <Plus color={COLORS.text} size={32} />
+                <LinearGradient colors={gradients.warmth} style={styles.fabGradient}>
+                    <Plus color="white" size={32} />
                 </LinearGradient>
             </TouchableOpacity>
             <AddPrayerModal
@@ -540,11 +547,13 @@ const PrayerScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background },
+
+
+const createStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
     scrollContent: { padding: SPACING.lg, paddingBottom: 100 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xl },
-    headerTitle: { color: COLORS.text, fontSize: 32, fontWeight: '800' },
+    headerTitle: { color: colors.text, fontSize: 32, fontWeight: '800' },
     aiButton: { marginBottom: SPACING.xl, borderRadius: 20, overflow: 'hidden', elevation: 10 },
     aiGradient: {
         flexDirection: 'row',
@@ -561,24 +570,24 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.md
     },
     seeAllText: {
-        color: COLORS.primary,
+        color: colors.primary,
         fontSize: 14,
         fontWeight: '700'
     },
-    aiButtonText: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
-    sectionTitle: { color: COLORS.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.md },
+    aiButtonText: { color: 'white', fontSize: 18, fontWeight: '700' },
+    sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: SPACING.md },
     categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, marginBottom: SPACING.xl },
     categoryCard: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         paddingHorizontal: SPACING.lg,
         paddingVertical: SPACING.md,
         borderRadius: 16,
         minWidth: '45%',
         alignItems: 'center'
     },
-    categoryText: { color: COLORS.text, fontWeight: '600' },
+    categoryText: { color: colors.text, fontWeight: '600' },
     upcomingCard: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         padding: 24,
         borderRadius: 28,
         marginBottom: SPACING.xl,
@@ -586,14 +595,14 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.05)',
         alignItems: 'center'
     },
-    upcomingLabel: { color: COLORS.textSecondary, fontSize: 16, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 },
+    upcomingLabel: { color: colors.textSecondary, fontSize: 16, fontWeight: '600', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 },
     upcomingTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
     upcomingIconRing: {
         width: 28,
         height: 28,
         borderRadius: 14,
         borderWidth: 4,
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center'
     },
@@ -602,16 +611,16 @@ const styles = StyleSheet.create({
         height: 14,
         borderRadius: 7,
         borderWidth: 2,
-        borderColor: COLORS.primary,
+        borderColor: colors.primary,
         opacity: 0.3
     },
-    upcomingTimeText: { color: COLORS.text, fontSize: 26, fontWeight: '300' },
-    upcomingTapHint: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '500', opacity: 0.7 },
+    upcomingTimeText: { color: colors.text, fontSize: 26, fontWeight: '300' },
+    upcomingTapHint: { color: colors.textSecondary, fontSize: 13, fontWeight: '500', opacity: 0.7 },
     prayerItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         padding: 18,
         borderRadius: 20,
         marginBottom: SPACING.md,
@@ -620,9 +629,9 @@ const styles = StyleSheet.create({
     },
     prayerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     categoryIndicator: { width: 4, height: 30, borderRadius: 2 },
-    prayerTitle: { color: COLORS.text, fontSize: 16, fontWeight: '600' },
-    prayerPreview: { color: COLORS.textSecondary, fontSize: 14, fontStyle: 'italic', marginVertical: 4, opacity: 0.8 },
-    prayerDate: { color: COLORS.textSecondary, fontSize: 12, marginTop: 4 },
+    prayerTitle: { color: colors.text, fontSize: 16, fontWeight: '600' },
+    prayerPreview: { color: colors.textSecondary, fontSize: 14, fontStyle: 'italic', marginVertical: 4, opacity: 0.8 },
+    prayerDate: { color: colors.textSecondary, fontSize: 12, marginTop: 4 },
     wordOfDayCard: {
         marginTop: SPACING.xl,
         backgroundColor: 'rgba(255, 215, 0, 0.05)',
@@ -632,9 +641,9 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 215, 0, 0.2)',
         alignItems: 'center'
     },
-    wordOfDayLabel: { color: COLORS.accent, fontWeight: '800', fontSize: 14, marginBottom: SPACING.sm, textTransform: 'uppercase' },
-    wordOfDayText: { color: COLORS.text, fontSize: 18, textAlign: 'center', fontStyle: 'italic', lineHeight: 26 },
-    wordOfDayRef: { color: COLORS.accent, marginTop: SPACING.sm, fontWeight: '700' },
+    wordOfDayLabel: { color: colors.accent, fontWeight: '800', fontSize: 14, marginBottom: SPACING.sm, textTransform: 'uppercase' },
+    wordOfDayText: { color: colors.text, fontSize: 18, textAlign: 'center', fontStyle: 'italic', lineHeight: 26 },
+    wordOfDayRef: { color: colors.accent, marginTop: SPACING.sm, fontWeight: '700' },
     shareWordBtn: {
         position: 'absolute',
         top: SPACING.md,
@@ -646,17 +655,17 @@ const styles = StyleSheet.create({
     fab: { position: 'absolute', bottom: 20, right: 20, borderRadius: 30, elevation: 8 },
     fabGradient: { padding: SPACING.md, borderRadius: 30, width: 64, height: 64, justifyContent: 'center', alignItems: 'center' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.8)', justifyContent: 'center', padding: SPACING.xl, zIndex: 1000 },
-    modalContent: { backgroundColor: COLORS.surface, borderRadius: 30, padding: SPACING.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    modalContent: { backgroundColor: colors.surface, borderRadius: 30, padding: SPACING.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
-    modalTitle: { color: COLORS.accent, fontSize: 20, fontWeight: '700' },
-    generatedText: { color: COLORS.text, fontSize: 18, lineHeight: 28, fontStyle: 'italic', marginBottom: SPACING.xl },
-    saveButton: { backgroundColor: COLORS.primary, padding: SPACING.md, borderRadius: 16, alignItems: 'center' },
-    saveButtonText: { color: COLORS.text, fontWeight: '700', fontSize: 16 },
+    modalTitle: { color: colors.accent, fontSize: 20, fontWeight: '700' },
+    generatedText: { color: colors.text, fontSize: 18, lineHeight: 28, fontStyle: 'italic', marginBottom: SPACING.xl },
+    saveButton: { backgroundColor: colors.primary, padding: SPACING.md, borderRadius: 16, alignItems: 'center' },
+    saveButtonText: { color: 'white', fontWeight: '700', fontSize: 16 },
 
     // Session Modal Styles
     sessionModal: { flex: 1 },
     sessionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, marginTop: Platform.OS === 'ios' ? 50 : 0 },
-    sessionTitle: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
+    sessionTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
     sessionContent: { padding: 24, alignItems: 'center' },
     sessionSubjectBadge: {
         flexDirection: 'row',
@@ -669,8 +678,8 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 101, 132, 0.2)'
     },
-    sessionSubjectText: { color: COLORS.secondary, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
-    sessionPrayerText: { color: COLORS.text, fontSize: 22, lineHeight: 36, textAlign: 'center', fontStyle: 'italic', marginBottom: 48, fontWeight: '300' },
+    sessionSubjectText: { color: colors.secondary, fontWeight: '700', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sessionPrayerText: { color: colors.text, fontSize: 22, lineHeight: 36, textAlign: 'center', fontStyle: 'italic', marginBottom: 48, fontWeight: '300' },
     sessionControls: { width: '100%', gap: 20 },
     aiVoiceBtn: {
         flexDirection: 'row',
@@ -681,21 +690,21 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)'
     },
-    aiVoiceBtnActive: { borderColor: COLORS.primary, backgroundColor: 'rgba(108, 99, 255, 0.1)' },
-    aiVoiceTitle: { color: COLORS.text, fontSize: 16, fontWeight: '700' },
-    aiVoiceStatus: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
-    startPrayingBtn: { borderRadius: 24, overflow: 'hidden', elevation: 12, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
+    aiVoiceBtnActive: { borderColor: colors.primary, backgroundColor: 'rgba(108, 99, 255, 0.1)' },
+    aiVoiceTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+    aiVoiceStatus: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+    startPrayingBtn: { borderRadius: 24, overflow: 'hidden', elevation: 12, shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
     startPrayingGradient: { height: 74, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    startPrayingText: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
+    startPrayingText: { color: 'white', fontSize: 20, fontWeight: '800' },
 
     activeSessionContainer: { width: '100%', gap: 20 },
     prayingActiveIndicator: { padding: 32, borderRadius: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(108, 99, 255, 0.2)' },
-    prayingActiveText: { color: COLORS.text, fontSize: 18, fontWeight: '700', marginTop: 16 },
-    prayingActiveSub: { color: COLORS.textSecondary, fontSize: 14, marginTop: 4 },
+    prayingActiveText: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16 },
+    prayingActiveSub: { color: colors.textSecondary, fontSize: 14, marginTop: 4 },
     doneBtn: { borderRadius: 24, overflow: 'hidden' },
     doneGradient: { height: 74, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    doneText: { color: COLORS.text, fontSize: 20, fontWeight: '800' },
-    expirationWarning: { color: COLORS.textSecondary, fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginBottom: 20, opacity: 0.6 }
+    doneText: { color: 'white', fontSize: 20, fontWeight: '800' },
+    expirationWarning: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginBottom: 20, opacity: 0.6 }
 });
 
 export default PrayerScreen;
